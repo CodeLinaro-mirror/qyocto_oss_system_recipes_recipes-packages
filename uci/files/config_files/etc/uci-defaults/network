@@ -6,6 +6,7 @@
 
 [ -e /etc/config/network ] && exit 0
 
+mkdir -p /etc/config/
 touch /etc/config/network
 
 . /lib/functions/uci-defaults.sh
