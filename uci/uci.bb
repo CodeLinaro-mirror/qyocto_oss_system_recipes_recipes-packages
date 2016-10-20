@@ -7,6 +7,7 @@ LIC_FILES_CHKSUM = "file://uci.h;endline=13;md5=0ee862ed12171ee619c8c2eb7eff77f2
 DEPENDS = "json-c libubox lua5.1"
 
 inherit cmake pkgconfig
+inherit update-rc.d
 
 SRC_URI = "http://dev.gateworks.com/sources/uci-2015-08-27.1.tar.gz \
            file://config_files"
@@ -44,3 +45,7 @@ FILES_${PN}-dev = "/usr/include/*"
 INSANE_SKIP_${PN} = "dev-so"
 
 BBCLASSEXTEND += "native"
+
+INITSCRIPT_PACKAGES = "uci"
+INITSCRIPT_NAME = "network"
+INITSCRIPT_PARAMS = "start 70 S . stop 70 0 6 1 ."
