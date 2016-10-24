@@ -4,36 +4,45 @@
 
 start()
 {
-        ipq806x_board_detect
-        ./etc/uci-defaults/network
+	ipq806x_board_detect
+	./etc/uci-defaults/network
 
-        local lanifname=$(uci_get network lan ifname)
-        local lanip=$(uci_get network lan ipaddr)
-        local lanports=$(uci_get network @switch_vlan[0] ports)
-        local wanports=$(uci_get network @switch_vlan[1] ports)
+	local lanifname=$(uci_get network lan ifname)
+	local lanip=$(uci_get network lan ipaddr)
+	local lanports=$(uci_get network @switch_vlan[0] ports)
+	local wanports=$(uci_get network @switch_vlan[1] ports)
+	local type=$(uci_get network lan type)
 
-        #setup lan and wan ports using ssdk
-        ifconfig $lanifname up
-        ifconfig $lanifname $lanip
+	#setup lan and wan ports using ssdk
+	for lanif in ${lanifname}; do
+		ifconfig $lanif up
 
-        ssdk_sh vlan entry create 1 > /dev/null
-        ssdk_sh vlan entry create 2 > /dev/null
+		[ -n $type ] && { \
+			brctl addbr br-lan
+			brctl addif br-lan $lanif
+		}
+	done
+	ifconfig br-lan up
+	ifconfig br-lan $lanip
 
-        lanports="${lanports:2}"
-        for i in ${lanports}
-        do
-        ssdk_sh vlan member add 1 $i untagged > /dev/null
-        ssdk_sh portvlan defaultcvid set $i 1 > /dev/null
-        done
+	ssdk_sh vlan entry create 1 > /dev/null
+	ssdk_sh vlan entry create 2 > /dev/null
 
-        wanports="${wanports:2}"
-        for i in ${wanports}
-        do
-        ssdk_sh vlan member add 2 $i untagged > /dev/null
-        ssdk_sh portvlan defaultcvid set $i 2 > /dev/null
-        done
+	lanports="${lanports:2}"
+	for i in ${lanports}
+	do
+	ssdk_sh vlan member add 1 $i untagged > /dev/null
+	ssdk_sh portvlan defaultcvid set $i 1 > /dev/null
+	done
 
-		./etc/init.d/networking restart
+	wanports="${wanports:2}"
+	for i in ${wanports}
+	do
+	ssdk_sh vlan member add 2 $i untagged > /dev/null
+	ssdk_sh portvlan defaultcvid set $i 2 > /dev/null
+	done
+
+	./etc/init.d/networking restart
 }
 
 
