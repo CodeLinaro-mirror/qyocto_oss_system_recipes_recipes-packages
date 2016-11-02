@@ -27,9 +27,10 @@ do_install_append() {
     mkdir -p ${D}/etc/uci-defaults
     mv ${D}/usr/bin ${D}/sbin
 
-    cp -a ${WORKDIR}/config_files/* ${D}/
+    cp -r ${WORKDIR}/config_files/* ${D}/
 	install -d ${D}${libdir}
 	install -m 0755 ${WORKDIR}/config_files/lib/ipq806x.sh ${D}/lib/
+	install -m 0755 ${WORKDIR}/config_files/lib/functions.sh ${D}/lib/
 	install -d ${D}/etc/uci-defaults/
 	install -m 0755 ${WORKDIR}/config_files/etc/uci-defaults/network ${D}/etc/uci-defaults/
 	install -d ${D}/etc/init.d/
