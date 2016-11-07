@@ -1,6 +1,6 @@
 DESCRIPTION = "libubox"
 SECTION = "libubox"
-LICENSE = "BSD"
+LICENSE = "ISC"
 PR = "r0"
 LIC_FILES_CHKSUM = "file://utils.h;endline=17;md5=4d7fac50d952764bf582f5dc34d3b6b9"
 
