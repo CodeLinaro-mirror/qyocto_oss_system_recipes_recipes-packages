@@ -6,9 +6,9 @@ HOMEPAGE = "http://www.lua.org/"
 
 PR = "r0"
 
-DEPENDS = "readline"
 SRC_URI = "http://www.lua.org/ftp/lua-${PV}.tar.gz \
            file://lua.pc \
+	   file://01-remove-readline-dependency.patch \
 "
 
 SRC_URI[md5sum] = "efbb645e897eae37cad4344ce8b0a614"

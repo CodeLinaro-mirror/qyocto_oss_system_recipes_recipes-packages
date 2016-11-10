@@ -6,12 +6,12 @@ HOMEPAGE = "http://www.lua.org/"
 
 PR = "r2"
 
-DEPENDS += "readline"
 SRC_URI = "http://www.lua.org/ftp/lua-${PV}.tar.gz \
            file://bitwise_operators.patch \
            file://lua5.1.pc \
            file://luaorg_1.patch \
            file://luaorg_2.patch \
+	   file://01-remove-readline-dependency.patch \
 "
 S = "${WORKDIR}/lua-${PV}"
 
