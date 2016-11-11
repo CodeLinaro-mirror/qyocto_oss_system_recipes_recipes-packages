@@ -8,11 +8,12 @@ DEPENDS = "json-c lua5.1"
 
 inherit cmake pkgconfig
 
-SRC_URI = "http://dev.gateworks.com/sources/libubox-2015-11-08-10429bccd0dc5d204635e110a7a8fae7b80d16cb.tar.gz "
+SRC_URI = "git://source.codeaurora.org/quic/qsdk/libubox;branch=openwrt/master"
+SRCREV = "10429bccd0dc5d204635e110a7a8fae7b80d16cb"
 
-SRC_URI[md5sum] = "16380cf88d298239a099233c10d8c0cc"
+SRC_URI[md5sum] = "eb1c1cfbdfb7f36f0c09d89dd98d641b"
 
-S = "${WORKDIR}/libubox-2015-11-08"
+S = "${WORKDIR}/git"
 
 EXTRA_OECMAKE += '-DLIBARCH=${baselib} \
                  -DLUAPATH=/usr/lib/lua \
