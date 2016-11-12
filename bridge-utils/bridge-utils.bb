@@ -1,6 +1,6 @@
 DESCRIPTION = "baridge-utils"
 SECTION = "bridge-utils"
-LICENSE = "LGPLv2.0+"
+LICENSE = "GPLv2"
 PR = "r0"
 LIC_FILES_CHKSUM = "file://COPYING;md5=f9d20a453221a1b7e32ae84694da2c37"
 
