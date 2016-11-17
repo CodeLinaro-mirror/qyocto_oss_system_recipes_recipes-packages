@@ -4,9 +4,7 @@ LICENSE = "ISC"
 PR = "r0"
 LIC_FILES_CHKSUM = "file://utils.h;endline=17;md5=4d7fac50d952764bf582f5dc34d3b6b9"
 
-DEPENDS = "json-c"
-
-RDEPENDS_${PN} = "lua5.1"
+DEPENDS = "json-c lua5.1"
 
 inherit cmake pkgconfig
 

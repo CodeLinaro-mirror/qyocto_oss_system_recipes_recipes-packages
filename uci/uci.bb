@@ -4,9 +4,7 @@ LICENSE = "LGPLv2.1"
 PR = "r0"
 LIC_FILES_CHKSUM = "file://uci.h;endline=13;md5=0ee862ed12171ee619c8c2eb7eff77f2"
 
-DEPENDS = "json-c libubox"
-
-RDEPENDS_${PN} = "lua5.1"
+DEPENDS = "json-c libubox lua5.1"
 
 inherit cmake pkgconfig
 inherit update-rc.d

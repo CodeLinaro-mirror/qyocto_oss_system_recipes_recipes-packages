@@ -32,7 +32,7 @@ do_compile () {
     oe_runmake linux
 }
 
-do_install_append () {
+do_install () {
     oe_runmake \
         'INSTALL_TOP=${D}${prefix}' \
         'INSTALL_BIN=${D}${bindir}' \
@@ -44,15 +44,11 @@ do_install_append () {
         install
     install -d ${D}${libdir}/pkgconfig
     install -m 0644 ${WORKDIR}/lua5.1.pc ${D}${libdir}/pkgconfig/lua5.1.pc
-	install -m 0755 ${S}/src/lua.h ${D}/usr/include/
-	install -m 0755 ${S}/src/liblua.a ${D}/usr/lib/
-	install -m 0755 ${S}/etc/lua.pc ${D}/usr/lib/pkgconfig/
-	install -m 0755 ${S}/src/lua ${D}/usr/bin/
-	install -m 0755 ${S}/src/luac ${D}/usr/bin/
+    rmdir ${D}${libdir}/lua/5.1
+    rmdir ${D}${libdir}/lua
+    rmdir ${D}${datadir}/lua/5.1
+    rmdir ${D}${datadir}/lua
 }
-
-FILES_${PN} += "${libdir}/* ${datadir_native}/* ${bindir}/* ${prefix}/*"
-
 BBCLASSEXTEND = "native"
 
 SRC_URI[md5sum] = "2e115fe26e435e33b0d5c022e4490567"
