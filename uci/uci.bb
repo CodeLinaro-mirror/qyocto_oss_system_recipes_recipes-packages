@@ -37,6 +37,7 @@ do_install_append() {
 	install -m 0755 ${WORKDIR}/config_files/etc/uci-defaults/network ${D}/etc/uci-defaults/
 	install -d ${D}/etc/init.d/
 	install -m 0755 ${WORKDIR}/config_files/etc/init.d/network ${D}/etc/init.d/network
+	install -m 0755 ${WORKDIR}/config_files/etc/init.d/ipq-boot ${D}/etc/init.d/ipq-boot
 }
 
 FILES_${PN} += "${libdir}/* ${baselib}/* ${sysconfdir}/*"
@@ -50,5 +51,5 @@ INSANE_SKIP_${PN} = "dev-so"
 BBCLASSEXTEND += "native"
 
 INITSCRIPT_PACKAGES = "uci"
-INITSCRIPT_NAME = "network"
+INITSCRIPT_NAME = "ipq-boot"
 INITSCRIPT_PARAMS = "start 70 S . stop 70 0 6 1 ."

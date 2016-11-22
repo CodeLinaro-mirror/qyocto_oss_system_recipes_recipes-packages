@@ -4,8 +4,6 @@
 
 start()
 {
-	ipq806x_board_detect
-	./etc/uci-defaults/network
 
 	local lanifname=$(uci_get network lan ifname)
 	local lanip=$(uci_get network lan ipaddr)
