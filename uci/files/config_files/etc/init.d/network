@@ -40,7 +40,7 @@ start()
 	ssdk_sh portvlan defaultcvid set $i 2 > /dev/null
 	done
 
-	./etc/init.d/networking restart
+	/etc/init.d/networking restart
 }
 
 
