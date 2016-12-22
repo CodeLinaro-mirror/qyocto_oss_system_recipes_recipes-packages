@@ -42,6 +42,7 @@ start() {
 	execute_uci_defaults
 	/etc/init.d/network start
 	/sbin/wifi up
+	/etc/init.d/telnet start
 }
 
 case "$1" in
