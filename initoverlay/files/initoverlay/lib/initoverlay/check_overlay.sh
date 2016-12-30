@@ -35,7 +35,7 @@ mount_no_rootfs_data() {
 
 check_for_rootfs_data() {
     check_skip || {
-	grep -qs rootfs_data /proc/mtd || grep -qs ubi_rootfs_data /sys/class/ubi/ubi0/ubi0_1/name || grep -qs rootfs_data /sys/block/mmcblk0/mmcblk0p*/uevent || {
+	grep -qs rootfs_data /proc/mtd || grep -qs rootfs_data /sys/class/ubi/ubi0/ubi0_2/name || grep -qs rootfs_data /sys/block/mmcblk0/mmcblk0p*/uevent || {
 	    mount_no_rootfs_data && pi_mount_skip_next=true
 	}
     }

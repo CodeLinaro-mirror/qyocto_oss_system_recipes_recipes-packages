@@ -87,8 +87,8 @@ do_mount_ubifs() {
 }
 
 do_mount_rootfs_data() {
-	check_for_firstboot
 	do_mount_ubifs
-	do_mount_jffs2
-	do_mount_ext4
+	ubifs_not_mounted && check_for_firstboot
+	ubifs_not_mounted && do_mount_jffs2
+	jffs2_not_mounted && ubifs_not_mounted && do_mount_ext4
 }
