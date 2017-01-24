@@ -10,6 +10,7 @@ start()
 	local lanports=$(uci_get network @switch_vlan[0] ports)
 	local wanports=$(uci_get network @switch_vlan[1] ports)
 	local type=$(uci_get network lan type)
+	local cpu_port=0
 
 	#setup lan and wan ports using ssdk
 	for lanif in ${lanifname}; do
@@ -27,18 +28,25 @@ start()
 	ssdk_sh vlan entry create 2 > /dev/null
 
 	lanports="${lanports:2}"
-	for i in ${lanports}
+	for port_id in ${lanports}
 	do
-	ssdk_sh vlan member add 1 $i untagged > /dev/null
-	ssdk_sh portvlan defaultcvid set $i 1 > /dev/null
+	ssdk_sh vlan member add 1 $port_id untagged > /dev/null
+	ssdk_sh portvlan defaultcvid set $port_id 1 > /dev/null
+	ssdk_sh portvlan ingress set $port_id secure
 	done
 
 	wanports="${wanports:2}"
-	for i in ${wanports}
+	for port_id in ${wanports}
 	do
-	ssdk_sh vlan member add 2 $i untagged > /dev/null
-	ssdk_sh portvlan defaultcvid set $i 2 > /dev/null
+	ssdk_sh vlan member add 2 $port_id untagged > /dev/null
+	ssdk_sh portvlan defaultcvid set $port_id 2 > /dev/null
+	ssdk_sh portvlan ingress set $port_id secure
 	done
+
+	#setup cpu port
+	ssdk_sh portvlan ingress set $cpu_port secure
+        ssdk_sh vlan member add 1 $cpu_port tagged
+	ssdk_sh vlan member add 2 $cpu_port tagged
 
 	/etc/init.d/networking restart
 }
