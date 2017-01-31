@@ -41,6 +41,7 @@ start() {
 	ipq806x_board_detect
 	execute_uci_defaults
 	/etc/init.d/network start
+	/sbin/wifi up
 }
 
 case "$1" in
