@@ -19,6 +19,7 @@ start()
 		[ -n $type ] && { \
 			brctl addbr br-lan
 			brctl addif br-lan $lanif
+			sysctl -w net.ipv6.conf.$lanif.disable_ipv6=1
 		}
 	done
 	ifconfig br-lan up
