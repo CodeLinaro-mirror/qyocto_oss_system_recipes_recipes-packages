@@ -75,6 +75,9 @@ dupe() { # <new_root> <old_root>
 pivot() { # <new_root> <old_root>
 	mount -o move /proc $1/proc && \
 	pivot_root $1 $1$2 && {
+		mount -o move $2/var /var
+		mount -o move $2/run /run
+		mount -o move $2/etc /etc
 		mount -o move $2/dev /dev
 		mount -o move $2/tmp /tmp
 		mount -o move $2/sys /sys 2>&-
@@ -84,10 +87,15 @@ pivot() { # <new_root> <old_root>
 }
 
 fopivot() { # <rw_root> <ro_root> <dupe?>
-	root=$1
+	root=/mnt
 	{
 		if grep -q overlay /proc/filesystems; then
-			mount -t overlayfs -olowerdir=/,upperdir=$1 "overlayfs:$1" /mnt && root=/mnt
+			mount -t overlayfs -o lowerdir=/,upperdir=$1 "overlayfs:$1" /mnt || {
+				mkdir -p /overlay/upper
+				mkdir -p /overlay/work
+				mount -t overlay overlayfs:/overlay /mnt -o lowerdir=/,upperdir=/overlay/upper,workdir=/overlay/work
+			}
+
 		elif grep -q mini_fo /proc/filesystems; then
 			mount -t mini_fo -o base=/,sto=$1 "mini_fo:$1" /mnt 2>&- && root=/mnt
 		else

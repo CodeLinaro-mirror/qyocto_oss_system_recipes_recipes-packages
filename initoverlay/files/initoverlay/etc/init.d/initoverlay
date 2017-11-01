@@ -15,7 +15,6 @@
 #  OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-. /lib/functions.sh
 . /lib/functions/boot.sh
 
 pi_mount_skip_next=false

@@ -16,7 +16,6 @@
 #
 
 
-. /lib/functions.sh
 . /lib/functions/boot.sh
 
 
