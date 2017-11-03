@@ -1,11 +1,15 @@
 [Unit]
 Description=InitOverlay service
+DefaultDependencies=no
 After=systemd-remount-fs.service systemd-tmpfiles-setup.service tmp.mount
+Before=sysinit.target
 
 [Service]
 Type=oneshot
 ExecStart= /bin/sh -c "/sbin/initoverlay start"
-ExecStop=/bin/sh -c 'echo "Stopping/Restarting initoverlay" >> /dev/console
-RemainAfterExit=Yes
+ExecStop=/bin/sh -c echo "Stopping/Restarting initoverlay" >> /dev/console
+RemainAfterExit=No
+
 [Install]
-WantedBy=multi-user.target
+WantedBy=basic.target
+WantedBy=sysinit.target
