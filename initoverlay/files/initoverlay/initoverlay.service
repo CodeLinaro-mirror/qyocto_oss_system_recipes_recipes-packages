@@ -1,7 +1,8 @@
 [Unit]
 Description=InitOverlay service
 DefaultDependencies=no
-After=systemd-remount-fs.service systemd-tmpfiles-setup.service tmp.mount
+Wants=local-fs.target
+After=systemd-modules-load.service
 Before=sysinit.target
 
 [Service]
@@ -11,5 +12,4 @@ ExecStop=/bin/sh -c echo "Stopping/Restarting initoverlay" >> /dev/console
 RemainAfterExit=No
 
 [Install]
-WantedBy=basic.target
 WantedBy=sysinit.target
