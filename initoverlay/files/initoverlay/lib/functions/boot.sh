@@ -76,10 +76,19 @@ pivot() { # <new_root> <old_root>
 	mount -o move /proc $1/proc && \
 	pivot_root $1 $1$2 && {
 		mount -o move $2/dev /dev
-		mount -o move $2/var/volatile /var/volatile
+		mount -o move $2/var/volatile /var/volatile 2>&-
 		mount -o move $2/tmp /tmp
 		mount -o move $2/sys /sys 2>&-
 		mount -o move $2/run /run
+		mount -o move $2/etc/hostname /etc/hostname 2>&-
+		mount -o move $2/etc/hosts /etc/hosts 2>&-
+		mount -o move $2/etc/dhcp_static_hosts /etc/dhcp_static_hosts 2>&-
+		mount -o move $2/etc/machine-id /etc/machine-id 2>&-
+		mount -o move $2/etc/resolv.conf /etc/resolv.conf 2>&-
+		mount -o move $2/etc/dibbler /etc/dibbler 2>&-
+		mount -o move $2/etc/resolv.dnsmasq /etc/resolv.dnsmasq 2>&-
+		mount -o move $2/www /www 2>&-
+		mount -o move $2/var/spool/cron /var/spool/cron 2>&-
 		mount -o move $2/overlay /overlay 2>&-
 		return 0
 	}
