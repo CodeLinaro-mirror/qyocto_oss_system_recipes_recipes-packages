@@ -28,7 +28,7 @@ do_install_append() {
 	install -m 0755 ${WORKDIR}/initoverlay/etc/init.d/initoverlay ${D}/sbin/initoverlay
 	install -m 0755 ${WORKDIR}/initoverlay/etc/profile.d/overlay.sh ${D}/etc/profile.d/overlay.sh
 	install -m 0755 ${WORKDIR}/initoverlay/sbin/jffs2reset ${D}/sbin/jffs2reset
-	install -m 0755 ${WORKDIR}/initoverlay/initoverlay.service ${D}${systemd_unitdir}/system
+	install -m 0644 ${WORKDIR}/initoverlay/initoverlay.service ${D}${systemd_unitdir}/system
 }
 
 FILES_${PN} += "${libdir}/* ${baselib}/* ${sysconfdir}/* /rom /overlay /sbin ${systemd_unitdir}/system/"
