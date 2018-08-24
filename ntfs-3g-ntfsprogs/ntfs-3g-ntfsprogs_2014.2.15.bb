@@ -6,7 +6,11 @@ LICENSE = "GPLv2 & LGPLv2"
 LIC_FILES_CHKSUM = "file://COPYING;md5=59530bdf33659b29e73d4adb9f9f6552 \
                     file://COPYING.LIB;md5=f30a9716ef3762e3467a2f62bf790f0a"
 
-SRC_URI = "http://tuxera.com/opensource/ntfs-3g_ntfsprogs-${PV}.tgz"
+FILESEXTRAPATHS_prepend := "${THISDIR}/files/:"
+SRC_URI = " \
+	   http://tuxera.com/opensource/ntfs-3g_ntfsprogs-${PV}.tgz \
+	   file://01-fix-musl-build.patch \
+	   "
 S = "${WORKDIR}/ntfs-3g_ntfsprogs-${PV}"
 
 SRC_URI[md5sum] = "f11d563816249d730a00498983485f3a"
