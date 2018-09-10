@@ -17,7 +17,8 @@
 
 
 mount() {
-	/bin/busybox mount -o noatime "$@"
+	MOUNT_CMD=$(/bin/busybox mount &>/dev/null && echo "/bin/busybox mount" || echo "/bin/busybox.suid mount")
+	$MOUNT_CMD -o noatime "$@"
 }
 
 find_mtd_part() {
