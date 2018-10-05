@@ -4,7 +4,7 @@ FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 SRC_URI += "file://config_files"
 
 do_configure_append() {
-	touch ${S}/configs/ipq40xx_cdp_defconfig
+	touch ${S}/configs/${UBOOT_MACHINE}
 }
 
 do_install_append() {
