@@ -18,8 +18,9 @@ PACKAGES += "kernel-module-button-hotplug"
 INSANE_SKIP_${PN} = "dev"
 
 do_compile() {
+	unset LDFLAGS
 	make -C  "${STAGING_KERNEL_BUILDDIR}" \
-		ARCH="arm" \
+		ARCH="${ARCH}" \
 		CROSS_COMPILE='${TARGET_PREFIX}' \
 		SUBDIRS="${S}/../" \
 		modules
