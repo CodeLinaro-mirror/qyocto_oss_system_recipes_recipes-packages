@@ -15,6 +15,11 @@ do_install_append() {
 	install -m 0755 ${WORKDIR}/rc.local ${D}/etc/init.d/rc.local
 	install -d ${D}/sbin/
 	install -m 0755 ${WORKDIR}/setmac ${D}/sbin/setmac
+	install -m 0755 ${WORKDIR}/share/dot.profile ${D}/home/root/.profile
+	cat >> ${D}/home/root/.bashrc << EOT
+enable -n echo
+EOT
+
 }
 
 INITSCRIPT_PACKAGES = "base-files"
