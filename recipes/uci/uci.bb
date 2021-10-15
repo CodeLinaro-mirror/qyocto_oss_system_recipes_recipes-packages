@@ -12,7 +12,6 @@ inherit cmake pkgconfig
 
 SRC_URI = "https://mirrors.edge.kernel.org/caf_mirrored_source/quic/qsdk/uci-2019-09-01-415f9e48.tar.xz \
         file://config_files \
-        file://patches/01-modify-config-search-path.patch \
 "
 
 SRC_URI[md5sum] = "0b02010be03b4f1c55e0fc57390e0460"
