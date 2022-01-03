@@ -5,6 +5,7 @@ PACKAGE_ARCH = "${MACHINE_ARCH}"
 RDEPENDS_packagegroup-qti-wifi += " \
         iw \
         uci \
+	ipq-scripts \
         wireless-tools \
         qca-cnss \
         iperf \
