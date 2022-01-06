@@ -5,7 +5,7 @@ FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
 LICENSE = "GPLv2"
 LIC_FILES_CHKSUM = "file://main.c;\
-beginline=3;endline=10;md5=28fe1ff28187fe4efdc6414eeb8185e3"
+beginline=3;endline=11;md5=9a875901b222235fd4cff01d8736ab90"
 
 inherit autotools-brokensep module qperf
 
