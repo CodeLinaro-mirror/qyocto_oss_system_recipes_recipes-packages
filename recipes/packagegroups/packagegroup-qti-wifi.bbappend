@@ -3,7 +3,7 @@ LICENSE = "BSD-3-Clause"
 PACKAGE_ARCH = "${MACHINE_ARCH}"
 
 RDEPENDS_packagegroup-qti-wifi += " \
-        iw \
+        iw-wifi6e \
         uci \
 	ipq-scripts \
         wireless-tools \
