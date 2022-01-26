@@ -37,8 +37,10 @@ do_install_append() {
     install -d ${D}${libdir}
     install -m 0755 ${WORKDIR}/config_files/lib/ipq806x.sh ${D}/lib/
     install -m 0755 ${WORKDIR}/config_files/lib/functions.sh ${D}/lib/
+    install -m 0755 ${WORKDIR}/config_files/lib/functions/service.sh ${D}/lib/functions/
     install -m 0755 ${WORKDIR}/config_files/wifi ${D}/sbin/
     install -m 0755 ${WORKDIR}/config_files/hotplug-call ${D}/sbin/
+    install -m 0755 ${WORKDIR}/config_files/etc/rc.common ${D}/etc/rc.common
     install -d ${D}/etc/uci-defaults/
     install -m 0755 ${WORKDIR}/config_files/etc/uci-defaults/network ${D}/etc/uci-defaults/
 }
