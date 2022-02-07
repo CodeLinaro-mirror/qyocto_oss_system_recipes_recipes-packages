@@ -2,6 +2,8 @@
 include recipes-support/dnsmasq/dnsmasq.inc
 FILESEXTRAPATHS_prepend := "${TOPDIR}/../meta-openembedded/meta-networking/recipes-support/dnsmasq/files/:"
 
+LICENSE = "GPL-2.0+ & GPL-3.0"
+
 SRC_URI += "\
 	file://lua_2_78.patch \
 	"
