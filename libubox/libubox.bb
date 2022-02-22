@@ -14,7 +14,7 @@ SRCREV = "10429bccd0dc5d204635e110a7a8fae7b80d16cb"
 SRC_URI[md5sum] = "eb1c1cfbdfb7f36f0c09d89dd98d641b"
 
 S = "${WORKDIR}/git"
-
+TARGET_CC_ARCH += "${LDFLAGS}"
 EXTRA_OECMAKE += '-DLIBARCH=${baselib} \
                  -DLUAPATH=/usr/lib/lua \
                  -DCMAKE_MODULE_LINKER_FLAGS:STRING="-L${STAGING_LIBDIR}" \

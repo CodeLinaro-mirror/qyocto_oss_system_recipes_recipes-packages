@@ -18,3 +18,5 @@ S = "${WORKDIR}/${BP}"
 inherit autotools pkgconfig
 
 EXTRA_OECONF = "--exec-prefix=${STAGING_DIR_HOST}${layout_exec_prefix}"
+CFLAGS += "-Wno-error=format-security"
+CXXFLAGS += "-Wno-error=format-security"
