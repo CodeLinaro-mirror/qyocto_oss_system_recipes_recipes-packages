@@ -26,23 +26,9 @@ EXTRA_OECMAKE += '-DLIBARCH=${baselib} \
     -DCMAKE_SHARED_LINKER_FLAGS:STRING="-L${STAGING_LIBDIR}" \
     -DCMAKE_FIND_ROOT_PATH=${STAGING_DIR_HOST}'
 
-do_install_prepend() {
-    sed -i "s/%PATH%/\/usr\/sbin:\/usr\/bin:\/sbin:\/bin/g" ${WORKDIR}/config_files/hotplug-call
-}
-
 do_install_append() {
     mv ${D}/usr/bin ${D}/sbin
     cp -r ${WORKDIR}/config_files/* ${D}/
-
-    install -d ${D}${libdir}
-    install -m 0755 ${WORKDIR}/config_files/lib/ipq806x.sh ${D}/lib/
-    install -m 0755 ${WORKDIR}/config_files/lib/functions.sh ${D}/lib/
-    install -m 0755 ${WORKDIR}/config_files/lib/functions/service.sh ${D}/lib/functions/
-    install -m 0755 ${WORKDIR}/config_files/wifi ${D}/sbin/
-    install -m 0755 ${WORKDIR}/config_files/hotplug-call ${D}/sbin/
-    install -m 0755 ${WORKDIR}/config_files/etc/rc.common ${D}/etc/rc.common
-    install -d ${D}/etc/uci-defaults/
-    install -m 0755 ${WORKDIR}/config_files/etc/uci-defaults/network ${D}/etc/uci-defaults/
 }
 
 FILES_${PN} += "${libdir}/* ${baselib}/* ${sysconfdir}/*"
