@@ -15,13 +15,6 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-[ -e /etc/config/ubootenv ] && exit 0
-
-touch /etc/config/ubootenv
-
-. /lib/uboot-envtools.sh
-. /lib/functions.sh
-
 default_uboot_env () {
 	UBOOTENV_PART=$(cat /proc/mtd | grep APPSBLENV)
 	mtd_dev=$(echo $UBOOTENV_PART | awk '{print $1}' | sed 's/:$//')
@@ -40,20 +33,16 @@ default_uboot_env () {
 		mtd_erase=""
 	elif [ -n "$nor_flash" ]; then
 		uboot_env_size=$mtd_size
-		mtd_erase=""
+		# mtd_erase=""
 	else
 		# size is hardcoded to 0x40000 in u-boot
 		uboot_env_size=0x40000
-		sectors=$(( $uboot_env_size / $mtd_erase ))
+		# sectors=$(( $uboot_env_size / $mtd_erase ))
 	fi
-
-	echo /dev/$mtd_dev 0x0 $uboot_env_size $mtd_erase $sectors
+	sectors=$(( $uboot_env_size / $mtd_erase ))
+	echo "/dev/$mtd_dev 0x0 $uboot_env_size $mtd_erase 0x$sectors" > /etc/fw_env.config
 }
 
-env=$(default_uboot_env)
-[ -n "${env}" ] && ubootenv_add_uci_config $env
-
-config_load ubootenv
-config_foreach ubootenv_add_app_config ubootenv
+default_uboot_env
 
 exit 0
