@@ -1,0 +1,24 @@
+From c605aa884a94e463d02fea04b584408e77c84924 Mon Sep 17 00:00:00 2001
+From: Anbarasan Ganesan <quic_anbarasa@quicinc.com>
+Date: Thu, 14 Apr 2022 19:49:17 +0530
+Subject: [PATCH] recipes-packages: Fix implicit declaration
+
+Fix implicit declaration of function bitfield_set()
+
+Change-Id: Ica3dbbb9652435c4b72dfa2c303395a1a528bab7
+Signed-off-by: Anbarasan Ganesan <quic_anbarasa@quicinc.com>
+===================================================================
+--- uci-2015-08-27.1.orig/blob.c
++++ uci-2015-08-27.1/blob.c
+@@ -187,10 +187,7 @@ uci_blob_diff(struct blob_attr **tb1, st
+ 
+ mark:
+ 		ret = true;
+-		if (diff)
+-			bitfield_set(diff, i);
+-		else
+-			return ret;
++		return ret;
+ 	}
+ 
+ 	return ret;

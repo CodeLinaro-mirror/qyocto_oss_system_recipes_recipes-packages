@@ -4,15 +4,16 @@ LICENSE = "LGPLv2.1"
 PR = "r0"
 LIC_FILES_CHKSUM = "file://uci.h;endline=13;md5=0ee862ed12171ee619c8c2eb7eff77f2"
 
-DEPENDS = "json-c libubox"
+DEPENDS = "json-c libubox lua"
 
-RDEPENDS_${PN} = "lua5.1"
+RDEPENDS_${PN} = "lua"
 
 inherit cmake pkgconfig
 inherit update-rc.d
 
 SRC_URI = "http://dev.gateworks.com/sources/uci-2015-08-27.1.tar.gz \
-           file://config_files"
+	   file://patches/01_uci_fix_implicit_declaration.patch \
+	   file://config_files"
 
 SRC_URI[md5sum] = "b5f71c32ecc69f4ad09984ed8fadd702"
 
@@ -26,10 +27,10 @@ EXTRA_OECMAKE += '-DLIBARCH=${baselib} \
             -DCMAKE_FIND_ROOT_PATH=${STAGING_DIR_HOST}'
 
 do_install_append() {
-    mkdir -p ${D}/etc/uci-defaults
-    mv ${D}/usr/bin ${D}/sbin
+	mkdir -p ${D}/etc/uci-defaults
+	mv ${D}/usr/bin ${D}/sbin
 
-    cp -r ${WORKDIR}/config_files/* ${D}/
+	cp -r ${WORKDIR}/config_files/* ${D}/
 	install -d ${D}${libdir}
 	install -m 0755 ${WORKDIR}/config_files/lib/ipq806x.sh ${D}/lib/
 	install -m 0755 ${WORKDIR}/config_files/lib/functions.sh ${D}/lib/
@@ -38,6 +39,7 @@ do_install_append() {
 	install -d ${D}/etc/init.d/
 	install -m 0755 ${WORKDIR}/config_files/etc/init.d/network ${D}/etc/init.d/network
 	install -m 0755 ${WORKDIR}/config_files/etc/init.d/ipq-boot ${D}/etc/init.d/ipq-boot
+	install -m 0755 ${WORKDIR}/config_files/sbin/wifi ${D}/sbin/wifi
 }
 
 FILES_${PN} += "${libdir}/* ${baselib}/* ${sysconfdir}/*"
