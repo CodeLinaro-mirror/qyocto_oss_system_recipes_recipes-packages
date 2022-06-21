@@ -104,5 +104,5 @@ else
 fi
 
 # Find the partition and set the MAC addresses in the flash
-dd if=/tmp/macaddr of=$art_partition bs=64 2>/dev/null
+dd if=/tmp/macaddr of=$art_partition bs=64 conv=sync 2>/dev/null
 rm -f /tmp/macaddr
