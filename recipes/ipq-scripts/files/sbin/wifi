@@ -258,6 +258,21 @@ scan_wifi() {
 	config_load "${cfgfile:-wireless}"
 }
 
+scan_qcawifi() {
+        for device in ${2:-$DEVICES}; do (
+                config_get disabled "$device" disabled
+                [ "$disabled" = "1" ] && {
+                        echo "'$device' is disabled"
+                        set disable
+                }
+                config_get iftype "$device" type
+
+                eval "scan_$iftype '$device'"
+                echo "---wifi----scan_qcawifi()----$device($iftype):"
+
+        ); done
+}
+
 wifi_trap() {
 	for driver in ${1:-$DRIVERS}; do (
 		if eval "type trap_$driver" 2>/dev/null >/dev/null; then
@@ -284,6 +299,7 @@ case "$1" in
 	recover) wifi_recover "$2";;
         multi_up|\
         multi_down) multi_radio_wifi_updown "$@";;
+        scan) scan_qcawifi;;
 	--help|help) usage;;
 	*) wifi_updown "enable" "$2" "$3";;
 esac
