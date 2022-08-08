@@ -31,12 +31,16 @@ find_mtd_part() {
 }
 
 find_mmc_part() {
-	local DEVNAME PARTNAME
+        local DEVNAME PARTNAME
 
-	for DEVNAME in $(find /sys/block/mmcblk*/ -name 'mmcblk*p*'); do
-		PARTNAME=$(grep PARTNAME ${DEVNAME}/uevent | cut -f2 -d'=')
-		[ "$PARTNAME" = "$1" ] && echo "/dev/$(basename $DEVNAME)" && return 0
-	done
+        if grep -q "$1" /proc/mtd; then
+                echo "" && return 0
+        fi
+
+        for DEVNAME in /sys/block/mmcblk*/mmcblk*p*; do
+                PARTNAME=$(grep PARTNAME ${DEVNAME}/uevent | cut -f2 -d'=')
+                [ "$PARTNAME" = "$1" ] && echo "/dev/$(basename $DEVNAME)" && return 0
+        done
 }
 
 jffs2_ready () {
