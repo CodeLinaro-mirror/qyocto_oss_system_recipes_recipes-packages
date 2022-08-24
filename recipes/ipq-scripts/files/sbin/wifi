@@ -193,6 +193,27 @@ wifi_load() {
 	_wifi_updown "enable" "$1"
 }
 
+wifi_unload_only() {
+	for driver in ${1:-$DRIVERS}; do (
+		if eval "type unload_$driver" 2>/dev/null >/dev/null; then
+			eval "unload_$driver" || echo "$driver: unload failed" >&2
+		else
+			echo "$driver: wifi unload not supported" >&2
+		fi
+	); done
+}
+
+wifi_load_only() {
+	wifi_unload_only
+	for driver in ${1:-$DRIVERS}; do (
+		if eval "type load_$driver" 2>/dev/null >/dev/null; then
+			eval "load_$driver" || echo "$driver: load failed" >&2
+		else
+			echo "$driver: wifi load not supported" >&2
+		fi
+	); done
+}
+
 start_net() {(
 	local iface="$1"
 	local config="$2"
@@ -300,6 +321,8 @@ case "$1" in
         multi_up|\
         multi_down) multi_radio_wifi_updown "$@";;
         scan) scan_qcawifi;;
+	load_only) wifi_load_only "$2";;
+	unload_only) wifi_unload_only "$2";;
 	--help|help) usage;;
 	*) wifi_updown "enable" "$2" "$3";;
 esac
