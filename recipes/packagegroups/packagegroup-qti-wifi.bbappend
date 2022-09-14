@@ -9,6 +9,5 @@ RDEPENDS_packagegroup-qti-wifi += " \
         wireless-tools \
         qca-cnss \
         iperf \
-	qca-sigma-dut \
         "
 
