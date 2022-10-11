@@ -16,6 +16,7 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 . /lib/functions/boot.sh
+. /lib/read_caldata_to_fs.sh
 
 START=00
 STOP=95
@@ -184,8 +185,7 @@ mount_wifi_fw (){
                 fi
         fi
 
-        # . /lib/read_caldata_to_fs.sh
-        # do_load_ipq4019_board_bin
+        do_load_ipq_board_bin
 
         if [ -e /lib/firmware/$arch/WIFI_FW/board-2.bin ]; then
                 mkdir -p /lib/firmware/ath11k/$arch/$hw
