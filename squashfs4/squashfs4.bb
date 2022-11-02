@@ -16,8 +16,10 @@ SRC_URI[sha256sum] = "d9e0195aa922dbb665ed322b9aaa96e04a476ee650f39bbeadb0d00b24
 SRC_URI[md5sum] = "1b7a781fb4cf8938842279bd3e8ee852"
 
 S = "${WORKDIR}/squashfs${PKG_VERSION}/"
+
 DEPENDS =" zlib xz "
 DEPENDS +="squashfs4-native"
+LDFLAGS_class-native = "-L${STAGING_LIBDIR_NATIVE}"
 
 do_compile() {
 	make -C ${S}/squashfs-tools CROSS_COMPILE=${TARGET_PREFIX} XZ_SUPPORT=1 LZMA_XZ_SUPPORT=1 XATTR_SUPPORT=  mksquashfs unsquashfs
@@ -34,3 +36,4 @@ do_install_class-native() {
 
 }
 BBCLASSEXTEND = "native nativesdk"
+INSANE_SKIP_${PN} = "ldflags"
