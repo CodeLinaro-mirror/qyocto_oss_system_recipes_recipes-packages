@@ -123,6 +123,9 @@ ipq_board_detect() {
 	*"AP-AL02-C7")
 		name="qcom,ipq9574-ap-al02-c7"
 		;;
+	*"AP-AL02-C9")
+		name="qcom,ipq9574-ap-al02-c9"
+		;;
 	*"AP-AL02-C10")
 		name="qcom,ipq9574-ap-al02-c10"
 		;;
