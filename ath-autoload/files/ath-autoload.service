@@ -16,12 +16,10 @@
 [Unit]
 Description=QTI ath11k_ahb ath12k driver autoload
 After=wififw-mount.service
-Wants=wififw-mount.service
 
 [Service]
-Type=simple
-ExecStart= /bin/sh /usr/bin/ath-autoload.sh start
-ExecStop= /bin/sh /usr/bin/ath-autoload.sh stop
+Type=oneshot
+ExecStart= modprobe -a ath12k ath11k_ahb
 RemainAfterExit=Yes
 StandardOutput=syslog+console
 
