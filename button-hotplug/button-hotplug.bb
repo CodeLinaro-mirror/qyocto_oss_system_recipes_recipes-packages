@@ -23,6 +23,7 @@ do_compile() {
 		ARCH="${ARCH}" \
 		CROSS_COMPILE='${TARGET_PREFIX}' \
 		SUBDIRS="${S}/../" \
+		M="${S}/../" \
 		modules
 }
 do_install() {
