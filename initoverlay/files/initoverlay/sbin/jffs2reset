@@ -2,4 +2,7 @@
 echo "RESET TO FACTORY SETTINGS..."
 rm -rf  /overlay/*
 echo "Rebooting the system..."
+sync
+sleep 3
+sync
 reboot -f
