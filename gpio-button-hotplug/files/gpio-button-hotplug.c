@@ -140,8 +140,8 @@ static int button_hotplug_fill_event(struct bh_event *event)
 	if (ret)
 		return ret;
 
-	ret = bh_event_add_var(event, 0, "PATH=%s",
-					"/sbin:/bin:/usr/sbin:/usr/bin");
+	ret = bh_event_add_var(event, 0, "DEVPATH=%s",
+					"/devices/platform/soc/soc:gpio_keys");
 	if (ret)
 		return ret;
 
@@ -181,7 +181,7 @@ static void button_hotplug_work(struct work_struct *work)
 	if (!event->skb)
 		goto out_free_event;
 
-	ret = bh_event_add_var(event, 0, "%s@", event->action);
+	ret = bh_event_add_var(event, 0, "%s@/", event->action);
 	if (ret)
 		goto out_free_skb;
 
@@ -216,7 +216,7 @@ static int button_hotplug_create_event(const char *name, unsigned int type,
 	event->name = name;
 	event->type = type;
 	event->seen = seen;
-	event->action = pressed ? "pressed" : "released";
+	event->action = pressed ? "add" : "remove";
 
 	INIT_WORK(&event->work, (void *)(void *)button_hotplug_work);
 	schedule_work(&event->work);
