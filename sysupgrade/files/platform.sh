@@ -140,15 +140,57 @@ do_flash_partition() {
 	fi
 }
 
+age_check() {
+	#Try mode
+	local age0=$(cat /proc/boot_info/bootconfig0/age)
+	local age1=$(cat /proc/boot_info/bootconfig1/age)
+
+	if [ $age0 -le $age1 ]; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+get_bootconfig_name_flashboot() {
+	local age0=$(cat /proc/boot_info/bootconfig0/age)
+	local age1=$(cat /proc/boot_info/bootconfig1/age)
+	local bcname
+
+	if [ $age0 -ge $age1 ]; then
+		bcname="bootconfig0"
+	else
+		bcname="bootconfig1"
+	fi
+
+	echo $bcname
+}
+
 do_flash_bootconfig() {
 	local bin=$1
 	local mtdname=$2
+	local bc0="bootconfig0"
 
+	bin=$(get_bootconfig_name_flashboot)
 	# Fail safe upgrade
-	if [ -f /proc/boot_info/getbinary_${bin} ]; then
-		cat /proc/boot_info/getbinary_${bin} > /tmp/${bin}.bin
+	if [ -f /proc/boot_info/$bin/getbinary_bootconfig ]; then
+		cat /proc/boot_info/$bin/getbinary_bootconfig > /tmp/${bin}.bin
 		do_flash_partition $bin $mtdname
 	fi
+}
+
+get_bootconfig_name(){
+	local age0=$(cat /proc/boot_info/bootconfig0/age)
+	local age1=$(cat /proc/boot_info/bootconfig1/age)
+	local bc_name
+
+	if age_check ; then
+		bc_name="bootconfig0"
+	else
+		bc_name="bootconfig1"
+	fi
+
+        echo $bc_name
 }
 
 do_flash_failsafe_partition() {
@@ -156,16 +198,27 @@ do_flash_failsafe_partition() {
 	local mtdname=$2
 	local emmcblock
 	local primaryboot
+	local bootname
 
+	bootname=$(get_bootconfig_name)
 	# Fail safe upgrade
-	[ -f /proc/boot_info/$mtdname/upgradepartition ] && {
+	[ -f /proc/boot_info/$bootname/$mtdname/upgradepartition ] && {
 		default_mtd=$mtdname
-		mtdname=$(cat /proc/boot_info/$mtdname/upgradepartition)
-		primaryboot=$(cat /proc/boot_info/$default_mtd/primaryboot)
-		if [ $primaryboot -eq 0 ]; then
-			echo 1 > /proc/boot_info/$default_mtd/primaryboot
+		mtdname=$(cat /proc/boot_info/$bootname/$mtdname/upgradepartition)
+		if [ "$bootname" = "bootconfig0" ]; then
+			primaryboot=$(cat /proc/boot_info/bootconfig1/$default_mtd/primaryboot)
+			bootname="bootconfig1"
 		else
-			echo 0 > /proc/boot_info/$default_mtd/primaryboot
+			primaryboot=$(cat /proc/boot_info/bootconfig0/$default_mtd/primaryboot)
+			bootname="bootconfig0"
+		fi
+
+		if [ $primaryboot -eq 0 ]; then
+			echo 1 > /proc/boot_info/bootconfig0/$default_mtd/primaryboot
+			echo 1 > /proc/boot_info/bootconfig1/$default_mtd/primaryboot
+		else
+			echo 0 > /proc/boot_info/bootconfig0/$default_mtd/primaryboot
+			echo 0 > /proc/boot_info/bootconfig1/$default_mtd/primaryboot
 		fi
 	}
 
@@ -184,20 +237,32 @@ do_flash_ubi() {
 	local mtdname=$2
 	local mtdpart
 	local primaryboot
+	local btname
 
 	mtdpart=$(grep "\"${mtdname}\"" /proc/mtd | awk -F: '{print $1}')
 	#ubidetach -f -p /dev/${mtdpart}
 
+	btname=$(get_bootconfig_name)
+
 	# Fail safe upgrade
-	[ -f /proc/boot_info/$mtdname/upgradepartition ] && {
-		primaryboot=$(cat /proc/boot_info/$mtdname/primaryboot)
-		if [ $primaryboot -eq 0 ]; then
-			echo 1 > /proc/boot_info/$mtdname/primaryboot
+	[ -f /proc/boot_info/$btname/$mtdname/upgradepartition ] && {
+		if [ "$btname" = "bootconfig0" ]; then
+			primaryboot=$(cat /proc/boot_info/bootconfig1/$mtdname/primaryboot)
+			btname="bootconfig1"
 		else
-			echo 0 > /proc/boot_info/$mtdname/primaryboot
+			primaryboot=$(cat /proc/boot_info/bootconfig0/$mtdname/primaryboot)
+			btname="bootconfig0"
 		fi
 
-		mtdname=$(cat /proc/boot_info/$mtdname/upgradepartition)
+		if [ $primaryboot -eq 0 ]; then
+			echo 1 > /proc/boot_info/bootconfig0/$mtdname/primaryboot
+			echo 1 > /proc/boot_info/bootconfig1/$mtdname/primaryboot
+		else
+			echo 0 > /proc/boot_info/bootconfig0/$mtdname/primaryboot
+			echo 0 > /proc/boot_info/bootconfig1/$mtdname/primaryboot
+		fi
+
+		mtdname=$(cat /proc/boot_info/$btname/$mtdname/upgradepartition)
 	}
 
 	mtdpart=$(grep "\"${mtdname}\"" /proc/mtd | awk -F: '{print $1}')
@@ -211,9 +276,11 @@ do_flash_failsafe_ubi_volume() {
 	local vol_name=$3
 	local tmpfile="${bin}.bin"
 	local mtdpart
+	local btname
 
-	[ -f /proc/boot_info/$mtdname/upgradepartition ] && {
-		mtdname=$(cat /proc/boot_info/$mtdname/upgradepartition)
+	btname=$(get_bootconfig_name)
+	[ -f /proc/boot_info/$btname/$mtdname/upgradepartition ] && {
+		mtdname=$(cat /proc/boot_info/$btname/$mtdname/upgradepartition)
 	}
 	mtdpart=$(grep "\"${mtdname}\"" /proc/mtd | awk -F: '{print $1}')
 
@@ -497,7 +564,7 @@ platform_do_upgrade() {
 
 		switch_layout linux
 		# update bootconfig to register that fw upgrade has been done
-		do_flash_bootconfig bootconfig "0:BOOTCONFIG"
+		do_flash_bootconfig bootconfig0 "0:BOOTCONFIG"
 		do_flash_bootconfig bootconfig1 "0:BOOTCONFIG1"
 		platform_version_upgrade
 
@@ -539,8 +606,9 @@ platform_copy_config() {
 		local mtdname=rootfs
 		local mtdpart
 
-		[ -f /proc/boot_info/$mtdname/upgradepartition ] && {
-			mtdname=$(cat /proc/boot_info/$mtdname/upgradepartition)
+		bin=$(get_bootconfig_name)
+		[ -f /proc/boot_info/$bin/$mtdname/upgradepartition ] && {
+			mtdname=$(cat /proc/boot_info/$bin/$mtdname/upgradepartition)
 		}
 
 		mtdpart=$(grep "\"${mtdname}\"" /proc/mtd | awk -F: '{print $1}')
