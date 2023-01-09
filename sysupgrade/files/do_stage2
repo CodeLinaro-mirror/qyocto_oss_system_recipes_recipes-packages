@@ -22,6 +22,8 @@ if [ -n "$UPGRADE_BACKUP" ] && type 'platform_copy_config' >/dev/null 2>/dev/nul
 	platform_copy_config
 fi
 
+platform_copy_config
+
 v "Upgrade completed"
 sleep 1
 
