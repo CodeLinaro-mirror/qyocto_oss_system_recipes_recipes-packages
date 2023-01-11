@@ -14,15 +14,15 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 [Unit]
-Description=QTI ath11k_ahb ath12k driver autoload
+Description=QTI ath affinity configuration
 After=wififw-mount.service
+Wants=wififw-mount.service
 
 [Service]
 Type=oneshot
-ExecStart= modprobe -a ath12k ath11k_ahb
+ExecStart= /bin/sh /usr/bin/ath-driver-init.sh start
 RemainAfterExit=Yes
 StandardOutput=syslog+console
 
 [Install]
 WantedBy=multi-user.target
-
