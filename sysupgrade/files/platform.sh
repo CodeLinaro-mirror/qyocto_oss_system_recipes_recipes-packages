@@ -341,32 +341,31 @@ get_fw_name() {
 	cat /proc/device-tree/model | grep -q 9574 && img="ipq9574"
 
 	wifi_ipq="ignored"
+	if lsmod | grep ath1 > /dev/null 2>&1 ; then
+		image_suffix="qcn9224_v2"
+	fi
 	machineid=$(fw_printenv -l /tmp/. machid | cut -d '=' -f 2)
 
 	case "${machineid}" in
 		"8050301"|\
 		"8050601"|\
-		"8050701")
-			wifi_ipq="qcn9224"
-			;;
+		"8050701"|\
 		"8050501"|\
-		"8050b01")
-			wifi_ipq=$img"_qcn9224"
-			;;
+		"8050b01"|\
 		"8050102"|\
 		"8050002"|\
-		"8050801")
-			wifi_ipq="qcn9224_dualmac"
-			;;
-		"8050d01")
-			wifi_ipq=$img"_qcn9224_dualmac"
-			;;
-		"8050c01")
-			wifi_ipq=$img"_qcn9000_qcn9224"
-			;;
+		"8050801"|\
+		"8050d01"|\
+		"8051001"|\
+		"8051101"|\
+		"8050c01"|\
 		"8050a01")
-			wifi_ipq=$img"_qcn9000_qcn9224_dualmac"
+			wifi_ipq="$img"_"$image_suffix"
 			;;
+		*)
+			wifi_ipq=$img"_qcn9000"
+			;;
+
 	esac
 
 	echo $wifi_ipq
