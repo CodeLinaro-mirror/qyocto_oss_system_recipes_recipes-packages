@@ -16,6 +16,8 @@
 [Unit]
 Description=QTI Wi-Fi Firmware Mounting Service
 After=initoverlay.service
+DefaultDependencies=no
+Before=ipq-boot.service
 
 [Service]
 Type=oneshot
