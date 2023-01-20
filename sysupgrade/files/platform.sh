@@ -341,6 +341,7 @@ get_fw_name() {
 	cat /proc/device-tree/model | grep -q 9574 && img="ipq9574"
 
 	wifi_ipq="ignored"
+	image_suffix="qcn9000_qcn9224_v2_dualmac"
 	if lsmod | grep ath1 > /dev/null 2>&1 ; then
 		image_suffix="qcn9224_v2"
 	fi
