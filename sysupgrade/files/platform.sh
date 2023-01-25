@@ -613,7 +613,7 @@ platform_copy_config() {
 
 		mtdpart=$(grep "\"${mtdname}\"" /proc/mtd | awk -F: '{print $1}')
 		ubiattach -p /dev/${mtdpart}
-		mount -t ubifs ubi0:rootfs_data /tmp/overlay
+		mount -t ubifs ubi1:rootfs_data /tmp/overlay
 		cp /tmp/sysupgrade.tgz /tmp/overlay/
 		sync
 		umount /tmp/overlay
