@@ -129,6 +129,21 @@ ipq_board_detect() {
 	*"AP-AL02-C10")
 		name="qcom,ipq9574-ap-al02-c10"
 		;;
+	*"AP-MI01.1")
+		name="qcom,ipq5332-ap-mi01.1"
+		;;
+	*"AP-MI01.2")
+		name="qcom,ipq5332-ap-mi01.2"
+		;;
+	*"AP-MI01.4")
+		name="qcom,ipq5332-ap-mi01.4"
+		;;
+	*"AP-MI01.6")
+		name="qcom,ipq5332-ap-mi01.6"
+		;;
+	*"AP-MI01.7")
+		name="qcom,ipq5332-ap-mi01.7"
+		;;
 	esac
 
 	[ -z "$name" ] && name="unknown"
