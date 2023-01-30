@@ -17,7 +17,9 @@
  OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '
 
-SERVER=$(fw_printenv serverip | cut -c10-24);
+SERVER=$(/sbin/fw_printenv serverip | cut -c10-24);
+
+DEVICENAME=q6mem
 
 if [ ! -n "$SERVER" ]; then
 	printf "%s\n" "Wrong configuaration SERVER = $SERVER" > /dev/console
