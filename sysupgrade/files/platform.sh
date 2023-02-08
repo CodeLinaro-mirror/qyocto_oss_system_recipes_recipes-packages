@@ -597,8 +597,17 @@ platform_get_offset() {
         done
 }
 
+find_last_mtd_part() {
+	local PART="$(grep "\"$1\"" /proc/mtd | awk -F: '{print $1}' | tail -1)"
+	local PREFIX=/dev/mtdblock
+
+	PART="${PART##mtd}"
+	[ -d /dev/mtdblock ] && PREFIX=/dev/mtdblock/
+	echo "${PART:+$PREFIX$PART}"
+}
+
 platform_copy_config() {
-	local nand_part="$(find_mtd_part "ubi_rootfs")"
+	local nand_part="$(find_last_mtd_part "ubi_rootfs")"
 	local emmcblock="$(find_mmc_part "rootfs")"
 	mkdir -p /tmp/overlay
 
