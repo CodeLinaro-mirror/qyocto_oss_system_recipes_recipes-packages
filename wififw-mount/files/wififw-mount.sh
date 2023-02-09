@@ -79,6 +79,8 @@ mount_wifi_fw (){
         fi
         if [[ "$arch" == "IPQ9574" ]]; then
                 wifi_on_rootfs="1"
+        elif [[ "$arch" == "IPQ5332" ]]; then
+                wifi_on_rootfs="1"
         fi
 
         emmc_part=$(find_mmc_part $part_name 2> /dev/null)
@@ -255,6 +257,8 @@ boot() {
         local board=$(grep -ao "IPQ.*" /proc/device-tree/model | awk -F/ '{print $2}')
         if [ "$platform" == "IPQ9574" ]; then
                 mount_wifi_fw "IPQ9574"
+        elif [ "$platform" == "IPQ5332" ]; then
+                mount_wifi_fw "IPQ5332"
         else
                 echo "\nInvalid Target"
         fi
