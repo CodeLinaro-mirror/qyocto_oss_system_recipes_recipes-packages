@@ -627,19 +627,15 @@ platform_copy_config() {
 		sync
 		umount /tmp/overlay
 	elif [ -e "$emmcblock" ]; then
-		losetup --detach-all
 		local data_blockoffset="$(platform_get_offset $emmcblock)"
 		[ -z "$data_blockoffset" ] && {
 			emmcblock="$(find_mmc_part "rootfs_1")"
 			data_blockoffset="$(platform_get_offset $emmcblock)"
 		}
-		local loopdev="$(losetup -f)"
-		losetup -o $data_blockoffset $loopdev $emmcblock || {
-			echo "Failed to mount looped rootfs_data."
-			reboot
-		}
-		echo y | mkfs.ext4 -F -L rootfs_data $loopdev
+		local loopdev="$(find_mmc_part "rootfs_data")"
+		echo y | mkfs.ext4 $loopdev
 		mount -t ext4 "$loopdev" /tmp/overlay
+		rm -rf /tmp/overlay/*
 		cp /tmp/sysupgrade.tgz /tmp/overlay/
 		sync
 		umount /tmp/overlay
