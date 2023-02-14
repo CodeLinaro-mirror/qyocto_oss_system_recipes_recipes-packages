@@ -73,7 +73,9 @@ mount_wifi_fw (){
         ;;
         esac
 
-        primaryboot=$(cat /proc/boot_info/$part_name/primaryboot)
+	local bootname="bootconfig1"
+
+	primaryboot=$(cat /proc/boot_info/$bootname/$part_name/primaryboot)
         if [ $primaryboot -eq 1 ]; then
                 part_name="0:WIFIFW_1"
         fi
