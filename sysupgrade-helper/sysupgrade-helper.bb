@@ -6,7 +6,7 @@ LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/${LICENSE};md5
 
 FILESPATH =+ "${TOPDIR}/../boot/:"
 
-COMPATIBLE_MACHINE = "(ipq40xx|ipq807x|ipq95xx)"
+COMPATIBLE_MACHINE = "(ipq40xx|ipq807x|ipq95xx|ipq53xx)"
 
 SRC_URI = "file://u-boot-2016 \
            file://config"
@@ -17,6 +17,7 @@ EXTRA_OEMAKE = 'CROSS_COMPILE=${TARGET_PREFIX} CC="${TARGET_PREFIX}gcc ${TOOLCHA
 EXTRA_OEMAKE += 'TARGETCC="${CC} ${BUILD_CFLAGS} ${BUILD_LDFLAGS} -Wno-error "'
 PARALLEL_MAKE = "-j 1"
 
+TARGET_CC_ARCH += "${LDFLAGS}"
 
 inherit uboot-config systemd
 
