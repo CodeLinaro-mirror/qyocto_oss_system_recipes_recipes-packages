@@ -27,6 +27,7 @@ pi_ubifs_mount_success=false
 . /lib/initoverlay/pivot_overlay.sh
 
 do_initoverlay() {
+	echo 6 > /sys/class/firmware/timeout
 	do_mount_overlay
 }
 
