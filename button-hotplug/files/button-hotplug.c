@@ -135,7 +135,7 @@ static int button_hotplug_create_event(const char *name, unsigned long seen,
 
 	event->name = name;
 	event->seen = seen;
-	event->action = pressed ? "pressed" : "released";
+	event->action = pressed ? "add" : "remove";
 	event->priv = thispriv;
 
 	INIT_WORK(&event->work, (void *)(void *)button_hotplug_work);
