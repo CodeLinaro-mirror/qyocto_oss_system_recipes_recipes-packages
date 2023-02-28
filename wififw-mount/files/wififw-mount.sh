@@ -249,7 +249,14 @@ mount_wifi_fw (){
                         ln -s /lib/firmware/$arch/WIFI_FW/qcn9224/qdss_trace_config.bin .
                 fi
         fi
-
+	if [ -d /lib/firmware/$arch/WIFI_FW ]; then
+                if [  -e /lib/firmware/$arch/WIFI_FW/board-2.bin ]; then
+                        mkdir -p /lib/firmware/ath12k/IPQ5332/hw1.0/
+                        cd /lib/firmware/ath12k/IPQ5332/hw1.0/
+                        ln -s /lib/firmware/$arch/WIFI_FW/board-2.bin .
+                        ln -s /lib/firmware/$arch/WIFI_FW/qdss_trace_config.bin .
+                fi
+        fi
         mkdir -p /vendor/firmware/$arch
         cd /vendor/firmware/$arch && ln -sf /lib/firmware/$arch/WIFI_FW/Data.msc .
 }
