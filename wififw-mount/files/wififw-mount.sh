@@ -328,6 +328,10 @@ stop() {
 
 case "$1" in
     start)
+        [ ! -e /tmp/sysinfo/board_name  ] && {
+               . /lib/ipq.sh
+               ipq_board_detect
+        }
         boot
         ;;
     stop)
