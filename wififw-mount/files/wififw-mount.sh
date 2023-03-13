@@ -101,7 +101,9 @@ mount_wifi_fw (){
 
         if [ -n "$emmc_part" ]; then
                 /bin/mount -t squashfs $emmc_part /lib/firmware/$arch/WIFI_FW > /dev/console 2>&1
-                [ -f /rom/lib/firmware/$arch/WIFI_FW/q6_fw.mdt ] && cp /rom/lib/firmware/$arch/WIFI_FW/*.* /lib/firmware/$arch/WIFI_FW/
+                if [ $? -eq 0 ]; then
+                        cp /rom/lib/firmware/$arch/WIFI_FW/*.* /lib/firmware/$arch/WIFI_FW/
+                fi
         elif [ -n "$nor_flash" ]; then
                 local nor_mtd_part=$(find_mtd_part $part_name 2> /dev/null)
                 if [ -n "$nor_mtd_part" ]; then
@@ -118,14 +120,19 @@ mount_wifi_fw (){
                 local ubi_part=$(find_mtd_part wifi_fw 2> /dev/null)
                 if [ -n "$ubi_part" ]; then
                         /bin/mount -t squashfs $ubi_part /lib/firmware/$arch/WIFI_FW > /dev/console 2>&1
-                        if [ ! -f /lib/firmware/$arch/WIFI_FW/q6_fw.mdt ]; then
+                        if [ $? -ne 0 ]; then
                                 echo "WIFI FW mount failed, retry after 1 sec" > /dev/console 2>&1
                                 sleep 1
                                 /bin/mount -t squashfs $ubi_part /lib/firmware/$arch/WIFI_FW > /dev/console 2>&1
+                                if [ $? -ne 0 ]; then
+                                        echo "CRITICAL:WIFI FW mount failed, after 1 sec retry" > /dev/console 2>&1
+                                        echo $(cat /proc/mtd) > /dev/console 2>&1
+                                        return -1
+                                fi
                         fi
                 fi
         fi
-        if [ -f /lib/firmware/$arch/WIFI_FW/q6_fw.mdt ]; then
+        if [ -f /lib/firmware/$arch/WIFI_FW/q6_fw.mdt ] || ([ -f /lib/firmware/$arch/WIFI_FW/q6_fw0.mdt ] && [ -f /lib/firmware/$arch/WIFI_FW/q6_fw1.mdt ]); then
                 echo " WIFI FW mount is successful" > /dev/console 2>&1
         fi
 
@@ -140,6 +147,7 @@ mount_wifi_fw (){
                 cd  $fwfolder && mkdir -p qcn9224 && mkdir -p /vendor/firmware/qcn9224
                 cd qcn9224 && ln -sf /lib/firmware/$arch/WIFI_FW/qcn9224/*.* .
                 cd /vendor/firmware/qcn9224 && ln -sf /lib/firmware/$arch/WIFI_FW/qcn9224/Data.msc .
+                ln -s /lib/firmware/$arch/WIFI_FW/qcn9224/Data_dualmac.msc .
                 mkdir -p /lib/firmware/qcn9224 && cd /lib/firmware/qcn9224 && create_soft_link /lib/firmware/$arch/WIFI_FW/qcn9224/qdss* .
         fi
 
@@ -162,38 +170,56 @@ mount_wifi_fw (){
                 mkdir -p /lib/firmware/qcn6122 && cd /lib/firmware/qcn6122 && create_soft_link /lib/firmware/$arch/WIFI_FW/qcn9100/qdss* .
         fi
 
+        if [ -d /lib/firmware/$arch/WIFI_FW/qcn9160 ]; then
+                cd $fwfolder && mkdir -p qcn9160 && mkdir -p /vendor/firmware/qcn9160
+                cd qcn9160 && ln -s /lib/firmware/$arch/WIFI_FW/qcn9160/*.* . && ln -s /lib/firmware/$arch/WIFI_FW/q6_fw.* .
+                cd /vendor/firmware/qcn9160 && ln -s /lib/firmware/$arch/WIFI_FW/qcn9160/Data.msc .
+                mkdir -p /lib/firmware/qcn9160 && cd /lib/firmware/qcn9160 && create_soft_link /lib/firmware/$arch/WIFI_FW/qcn9160/qdss* .
+        fi
+
         mkdir -p $fwfolder/$arch
         cd  $fwfolder/$arch && ln -sf /lib/firmware/$arch/WIFI_FW/*.* .
         cd  /lib/firmware/$arch && create_soft_link /lib/firmware/$arch/WIFI_FW/qdss* .
         if [ -e /sys/firmware/devicetree/base/MP_512 ] || [ -e /sys/firmware/devicetree/base/MP_256 ]; then
-                if [ -f /lib/firmware/$arch/WIFI_FW/firmware_rdp_feature_512P.ini ]; then
+                #qcn9224 INI file would have all QCN9224 RDP's info, so first priority for qcn9224 file if it exists
+                if [ -f /lib/firmware/$arch/WIFI_FW/qcn9224/firmware_rdp_feature_512P.ini ]; then
+                        cd /lib/firmware
+                        create_soft_link /lib/firmware/$arch/WIFI_FW/qcn9224/firmware_rdp_feature_512P.ini .
+                elif [ -f /lib/firmware/$arch/WIFI_FW/firmware_rdp_feature_512P.ini ]; then
                         cd /lib/firmware
                         create_soft_link /lib/firmware/$arch/WIFI_FW/firmware_rdp_feature_512P.ini .
                 elif [ -f /lib/firmware/$arch/WIFI_FW/qcn9000/firmware_rdp_feature_512P.ini ]; then
                         cd /lib/firmware
                         create_soft_link /lib/firmware/$arch/WIFI_FW/qcn9000/firmware_rdp_feature_512P.ini .
-                elif [ -f /lib/firmware/$arch/WIFI_FW/qcn9224/firmware_rdp_feature_512P.ini ]; then
-                        cd /lib/firmware
-                        create_soft_link /lib/firmware/$arch/WIFI_FW/qcn9224/firmware_rdp_feature_512P.ini .
                 fi
         else
-                if [ -f /lib/firmware/$arch/WIFI_FW/firmware_rdp_feature.ini ]; then
+                #qcn9224 INI file would have all QCN9224 RDP's info, so first priority for qcn9224 file if it exists
+                if [ -f /lib/firmware/$arch/WIFI_FW/qcn9224/firmware_rdp_feature.ini ]; then
+                        cd /lib/firmware
+                        create_soft_link /lib/firmware/$arch/WIFI_FW/qcn9224/firmware_rdp_feature.ini .
+                elif [ -f /lib/firmware/$arch/WIFI_FW/firmware_rdp_feature.ini ]; then
                         cd /lib/firmware
                         create_soft_link /lib/firmware/$arch/WIFI_FW/firmware_rdp_feature.ini .
                 elif [ -f /lib/firmware/$arch/WIFI_FW/qcn9000/firmware_rdp_feature.ini ]; then
                         cd /lib/firmware
                         create_soft_link /lib/firmware/$arch/WIFI_FW/qcn9000/firmware_rdp_feature.ini .
-                elif [ -f /lib/firmware/$arch/WIFI_FW/qcn9224/firmware_rdp_feature.ini ]; then
-                        cd /lib/firmware
-                        create_soft_link /lib/firmware/$arch/WIFI_FW/qcn9224/firmware_rdp_feature.ini .
                 fi
         fi
 
         do_load_ipq_board_bin
 
         if [ -e /lib/firmware/$arch/WIFI_FW/board-2.bin ]; then
-                mkdir -p /lib/firmware/ath11k/$arch/$hw
-                cd /lib/firmware/ath11k/$arch/$hw/
+
+                case "$arch" in
+                        IPQ5332)
+                                mkdir -p /lib/firmware/ath12k/$arch/$hw
+                                cd /lib/firmware/ath12k/$arch/$hw/
+                                ;;
+                        *)
+                                mkdir -p /lib/firmware/ath11k/$arch/$hw
+                                cd /lib/firmware/ath11k/$arch/$hw/
+                                ;;
+                esac
                 ln -sf /lib/firmware/$arch/WIFI_FW/board-2.bin .
                 ln -sf /tmp/$arch/caldata.bin .
                 ln -sf /lib/firmware/$arch/qdss_trace_config.bin .
@@ -236,8 +262,7 @@ mount_wifi_fw (){
                         ln -sf /lib/firmware/qcn9100/caldata*.bin .
                         ln -sf /lib/firmware/$arch/WIFI_FW/qcn9100/qdss_trace_config.bin .
                 fi
-        fi
-	if [ -d /lib/firmware/$arch/WIFI_FW/qcn9224 ]; then
+	elif [ -d /lib/firmware/$arch/WIFI_FW/qcn9224 ]; then
                 if [  -e /lib/firmware/$arch/WIFI_FW/qcn9224/board-2.bin ]; then
                         mkdir -p /lib/firmware/ath12k/QCN92XX/hw1.0/
                         cd /lib/firmware/ath12k/QCN92XX/hw1.0/
@@ -277,7 +302,7 @@ stop_wifi_fw() {
         local nor_flash=""
         arch=$1
 
-        if [[ "$arch" == "IPQ6018" ]] || [[ "$arch" == "IPQ5018" ]] || [[ "$arch" == "IPQ9574" ]]; then
+        if [[ "$arch" == "IPQ6018" ]] || [[ "$arch" == "IPQ5018" ]] || [[ "$arch" == "IPQ9574" ]] || [[ "$arch" == "IPQ5332" ]]; then
                 part_name="rootfs"
                 wifi_on_rootfs="1"
         fi
@@ -315,6 +340,8 @@ stop() {
 
         if [ "$platform" == "IPQ9574" ]; then
                 stop_wifi_fw "IPQ9574"
+        elif [ "$platform" == "IPQ5332" ]; then
+                stop_wifi_fw "IPQ5332"
         else
                 echo "\nInvalid Target"
                 return 0
