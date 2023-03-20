@@ -28,6 +28,7 @@ pi_ubifs_mount_success=false
 
 do_initoverlay() {
 	echo 6 > /sys/class/firmware/timeout
+	sleep 1 # sleep is required to delay initoverlay service
 	do_mount_overlay
 }
 
