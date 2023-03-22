@@ -6,8 +6,11 @@ inherit module
 
 FILESEXTRAPATHS_prepend := "${THISDIR}/files/:"
 
+inherit systemd
+
 SRC_URI = "file://Makefile \
 	   file://button-hotplug.c \
+	   file://restart-udevd.service \
 	   "
 
 DEPENDS = "virtual/kernel"
@@ -29,7 +32,10 @@ do_compile() {
 do_install() {
 	install -d ${D}${base_libdir}/modules/${KERNEL_VERSION}/kernel/drivers/${PN}
 	install -m 0644 ../button-hotplug${KERNEL_OBJECT_SUFFIX} ${D}${base_libdir}/modules/${KERNEL_VERSION}/kernel/drivers/${PN}
+	install -d ${D}${systemd_unitdir}/system
+        install -m 0644 ${WORKDIR}/restart-udevd.service  ${D}${systemd_unitdir}/system
 }
 
 KERNEL_MODULE_AUTOLOAD += "button-hotplug"
 module_autoload_button-hotplug = "button-hotplug"
+SYSTEMD_SERVICE_${PN} += "restart-udevd.service"
