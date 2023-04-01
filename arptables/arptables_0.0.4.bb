@@ -12,7 +12,7 @@ S = "${WORKDIR}/arptables-v0.0.4"
 EXTRA_OEMAKE = "\
         'CFLAGS=${CFLAGS} -I${S}/include -DARPTABLES_VERSION=\"0.0.4\"' 'BUILDDIR=${S}'"
 
-SRC_URI = "https://www.codeaurora.org/mirrored_source/quic/qsdk/arptables-v0.0.4.tar.gz"
+SRC_URI = "https://codelinaro.jfrog.io/artifactory/codelinaro-qsdk/arptables-v0.0.4.tar.gz"
 
 SRC_URI[md5sum] = "c2e99c3aa9d78c9dfa30710ca3168182"
 SCR_URI[sha256sum] = "277985e29ecd93bd759a58242cad0e02ba9d4a6e1b7795235e3b507661bc0049"
