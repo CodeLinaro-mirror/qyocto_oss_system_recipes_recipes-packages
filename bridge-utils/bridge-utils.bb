@@ -6,12 +6,12 @@ LIC_FILES_CHKSUM = "file://COPYING;md5=f9d20a453221a1b7e32ae84694da2c37"
 
 inherit autotools-brokensep update-alternatives
 
-SRC_URI = "git://source.codeaurora.org/quic/qsdk/bridge-utils;branch=korg/master"
+SRC_URI = "https://codelinaro.jfrog.io/artifactory/codelinaro-qsdk/bridge-utils-1.6.tar.xz"
 SRCREV = "b9841b03ed7403fc992e6216a5b08c74362b13e5"
 
-SRC_URI[md5sum] = "8a29aaef3c6d32c3a111b005615a1055"
+SRC_URI[md5sum] = "541ae1c50cc268056693608920e6c908"
 
-S = "${WORKDIR}/git"
+S = "${WORKDIR}/bridge-utils-1.6"
 
 do_install_append() {
 	install -d ${D}/usr/sbin
