@@ -286,7 +286,11 @@ do_flash_failsafe_ubi_volume() {
 
 	ubiattach -p /dev/${mtdpart}
 
-	volumes=$(ls /sys/class/ubi/ubi0/ | grep ubi._.*)
+	sync
+	sleep 3
+	sync
+
+	volumes=$(ls /sys/class/ubi/ubi1/ | grep ubi._.*)
 
 	for vol in ${volumes}
 	do
