@@ -26,10 +26,25 @@ pi_ubifs_mount_success=false
 . /lib/initoverlay/mount_overlay.sh
 . /lib/initoverlay/pivot_overlay.sh
 
+enable_installedservices() {
+
+	# systemctl enable for missing .services
+        for file1 in `find /overlay/upper/lib/systemd/system/ -name "*.service" | grep -v "@."`
+        do
+                file=`basename $file1`
+                systemctl show $file | grep State | grep -qw "LoadState=not-found"
+                if [ $? -eq 0 ]
+                then
+                        systemctl enable $file
+                fi
+        done
+}
+
 do_initoverlay() {
 	echo 6 > /sys/class/firmware/timeout
 	sleep 1 # sleep is required to delay initoverlay service
 	do_mount_overlay
+	enable_installedservices
 }
 
 case "${1}" in
