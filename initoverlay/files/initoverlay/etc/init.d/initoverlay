@@ -45,6 +45,13 @@ do_initoverlay() {
 	sleep 1 # sleep is required to delay initoverlay service
 	do_mount_overlay
 	enable_installedservices
+	if [ ! -e /overlay/system_defaults_append.txt ]; then
+		for file in /etc/utopia/*_system_default*
+		do
+			cat "$file" >> /etc/utopia/system_defaults
+		done
+		echo "1" > /overlay/system_defaults_append.txt
+	fi
 }
 
 case "${1}" in
