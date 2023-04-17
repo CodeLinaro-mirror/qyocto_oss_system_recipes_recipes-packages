@@ -16,7 +16,11 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 . /lib/functions/boot.sh
+
+if [ -e /lib/read_caldata_to_fs.sh ]
+then
 . /lib/read_caldata_to_fs.sh
+fi
 
 START=00
 STOP=95
@@ -294,6 +298,8 @@ boot() {
                 mount_wifi_fw "IPQ9574"
         elif [ "$platform" == "IPQ5332" ]; then
                 mount_wifi_fw "IPQ5332"
+        elif [ "$platform" == "IPQ8074" ]; then
+                mount_wifi_fw "IPQ8074"
         else
                 echo "\nInvalid Target"
         fi
@@ -349,6 +355,8 @@ stop() {
                 stop_wifi_fw "IPQ9574"
         elif [ "$platform" == "IPQ5332" ]; then
                 stop_wifi_fw "IPQ5332"
+        elif [ "$platform" == "IPQ8074" ]; then
+                stop_wifi_fw "IPQ8074"
         else
                 echo "\nInvalid Target"
                 return 0
