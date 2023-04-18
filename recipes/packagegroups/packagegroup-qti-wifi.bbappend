@@ -9,5 +9,7 @@ RDEPENDS_packagegroup-qti-wifi += " \
         wireless-tools \
         qca-cnss \
         iperf \
+        emesh-sp \
+        qca-hyfi-bridge \
         "
 
