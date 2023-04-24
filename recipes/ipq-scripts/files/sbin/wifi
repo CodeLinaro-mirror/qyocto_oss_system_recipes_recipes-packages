@@ -280,6 +280,7 @@ scan_wifi() {
 }
 
 scan_qcawifi() {
+	lock /var/run/scanwifi_lock
         for device in ${2:-$DEVICES}; do (
                 config_get disabled "$device" disabled
                 [ "$disabled" = "1" ] && {
@@ -288,10 +289,10 @@ scan_qcawifi() {
                 }
                 config_get iftype "$device" type
 
+                echo "scan_$iftype '$device'" >&2
                 eval "scan_$iftype '$device'"
-                echo "---wifi----scan_qcawifi()----$device($iftype):"
-
         ); done
+	lock -u /var/run/scanwifi_lock
 }
 
 wifi_trap() {
