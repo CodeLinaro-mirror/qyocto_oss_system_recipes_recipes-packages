@@ -33,6 +33,7 @@ do_install() {
 do_install_class-native() {
 	mkdir -p ${DEPLOY_DIR_IMAGE}
 	install -m 755 ${S}squashfs-tools/mksquashfs ${DEPLOY_DIR_IMAGE}/mksquashfs4
+	install -m 755 ${S}squashfs-tools/unsquashfs ${DEPLOY_DIR_IMAGE}/unsquashfs4
 
 }
 BBCLASSEXTEND = "native nativesdk"
