@@ -333,6 +333,7 @@ else
 fi
 
 if [ $TEST -eq 1 ]; then
+	platform_check_image $IMAGE
 	exit 0
 fi
 
