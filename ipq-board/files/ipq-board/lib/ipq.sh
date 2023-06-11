@@ -87,6 +87,18 @@ ipq_board_detect() {
 	*"AP-HK09")
 		name="ap-hk09"
 		;;
+	*"AP-HK10")
+		name="qcom,ipq8074-ap-hk10"
+		;;
+	*"AP-HK10-C1")
+		name="qcom,ipq8074-ap-hk10-c1"
+		;;
+	*"AP-HK10-C2")
+		name="qcom,ipq8074-ap-hk10-c2"
+		;;
+	*"AP-HK14")
+		name="qcom,ipq8074-ap-hk14"
+		;;
 	*"AP-AC01.1")
 		name="ap-ac01.1"
 		;;
@@ -123,11 +135,41 @@ ipq_board_detect() {
 	*"AP-AL02-C7")
 		name="qcom,ipq9574-ap-al02-c7"
 		;;
+	*"AP-AL02-C8")
+		name="qcom,ipq9574-ap-al02-c8"
+		;;
 	*"AP-AL02-C9")
 		name="qcom,ipq9574-ap-al02-c9"
 		;;
 	*"AP-AL02-C10")
 		name="qcom,ipq9574-ap-al02-c10"
+		;;
+	*"AP-AL02-C11")
+		name="qcom,ipq9574-ap-al02-c11"
+		;;
+	*"AP-AL02-C12")
+		name="qcom,ipq9574-ap-al02-c12"
+		;;
+	*"AP-AL02-C13")
+		name="qcom,ipq9574-ap-al02-c13"
+		;;
+	*"AP-AL02-C14")
+		name="qcom,ipq9574-ap-al02-c14"
+		;;
+	*"AP-AL02-C15")
+		name="qcom,ipq9574-ap-al02-c15"
+		;;
+	*"AP-AL02-C16")
+		name="qcom,ipq9574-ap-al02-c16"
+		;;
+	*"AP-AL02-C17")
+		name="qcom,ipq9574-ap-al02-c17"
+		;;
+	*"AP-AL02-C18")
+		name="qcom,ipq9574-ap-al02-c18"
+		;;
+	*"AP-AL02-C19")
+		name="qcom,ipq9574-ap-al02-c19"
 		;;
 	*"AP-MI01.1")
 		name="qcom,ipq5332-ap-mi01.1"

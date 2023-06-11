@@ -1,4 +1,5 @@
-# Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+#!/bin/sh
+# Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -12,36 +13,15 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-. /lib/ipq.sh
-
-syscfg_init()
-{
-	mkdir -p /nvram
-	/usr/bin/syscfg_create -f /nvram/syscfg.db
-	[ -e /nvram/syscfg.db ] || {
-	apply_system_defaults
-	}
-}
-
-start() {
-	if [ -e /overlay/sysupgrade.tgz ]; then
-		cd /
-		tar -zxvf /overlay/sysupgrade.tgz
-		sync
-		rm -rf /overlay/sysupgrade.tgz
-	fi
-	ipq_board_detect
-	[ -e /lib/ipq-boot/sw_config.sh ] && . /lib/ipq-boot/sw_config.sh
-	echo 3 > /proc/sys/vm/drop_caches
-}
-
-case "$1" in
-  start)
-    start
-    ;;
-  *)
-    echo "ipq-boot not executed, run as below:"
-    echo "ipq-boot start"
-esac
-
-exit $?
+if [ -f /overlay/reset_count.txt ];
+then
+	count=$(cat /overlay/reset_count.txt)
+else
+	count=0
+fi
+sync
+rm -rf /overlay/*
+sync
+count=$((count+1))
+echo "$count" > /overlay/reset_count.txt
+reboot
