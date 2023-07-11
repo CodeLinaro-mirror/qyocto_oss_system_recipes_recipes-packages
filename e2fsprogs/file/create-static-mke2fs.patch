@@ -1,0 +1,31 @@
+From: sreehari ramanjula <quic_sramanju@quicinc.com>
+Date: Wed, 13 Jul 2023 11:04:36 +0530
+Subject: [PATCH] e2fsprogram: Fixed segmentation fault errors
+
+Create mke2fs and fsck as static executable to generate
+ext4 image. Internally mke2fs is used to create mkfs.ext4
+
+Signed-of-by: sreehari ramanjula <quic_sramanju@quicinc.com>
+
+Index: git/misc/Makefile.in
+===================================================================
+--- git.orig/misc/Makefile.in
++++ git/misc/Makefile.in
+@@ -34,7 +34,7 @@ MKDIR_P = @MKDIR_P@
+ @FUSE_CMT@FUSE_PROG= fuse2fs
+ 
+ SPROGS=		mke2fs badblocks tune2fs dumpe2fs $(BLKID_PROG) logsave \
+-			$(E2IMAGE_PROG) @FSCK_PROG@ e2undo
++			$(E2IMAGE_PROG) @FSCK_PROG@ e2undo mke2fs.static
+ USPROGS=	mklost+found filefrag e2freefrag $(UUIDD_PROG) \
+ 			$(E4DEFRAG_PROG) $(E4CRYPT_PROG)
+ SMANPAGES=	tune2fs.8 mklost+found.8 mke2fs.8 dumpe2fs.8 badblocks.8 \
+@@ -346,7 +346,7 @@ dumpe2fs.static: $(DUMPE2FS_OBJS) $(DEPL
+ 
+ fsck: $(FSCK_OBJS) $(DEPLIBBLKID)
+ 	$(E) "	LD $@"
+-	$(Q) $(CC) $(ALL_LDFLAGS) -o fsck $(FSCK_OBJS) $(LIBBLKID) \
++	$(Q) $(CC) $(LDFLAGS_STATIC) -o fsck.static $(FSCK_OBJS) $(STATIC_LIBBLKID) \
+ 		$(LIBINTL) $(SYSLIBS)
+ 
+ fsck.profiled: $(FSCK_OBJS) $(PROFILED_DEPLIBBLKID)
