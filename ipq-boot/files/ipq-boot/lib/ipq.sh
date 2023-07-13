@@ -85,7 +85,7 @@ ipq_board_detect() {
 		name="ap-hk08"
 		;;
 	*"AP-HK09")
-		name="ap-hk09"
+		name="qcom,ipq8074-ap-hk09"
 		;;
 	*"AP-HK10")
 		name="qcom,ipq8074-ap-hk10"
