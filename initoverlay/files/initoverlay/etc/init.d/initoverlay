@@ -28,15 +28,21 @@ pi_ubifs_mount_success=false
 
 enable_installedservices() {
 
-	# systemctl enable for missing .services
-        for file1 in `find /overlay/upper/lib/systemd/system/ -name "*.service" | grep -v "@."`
-        do
+        # systemctl start for enabled .services
+        list="/overlay/upper/lib/systemd/system/ /overlay/upper/etc/systemd/system/ /overlay/upper/run/systemd/system/"
+	systemctl daemon-reload
+
+        for list_file in $list; do
+            for file1 in `find $list_file  -maxdepth 1 -name "*.service" 2>/dev/null | grep -v "@."`
+            do
                 file=`basename $file1`
-                systemctl show $file | grep State | grep -qw "LoadState=not-found"
+                systemctl show $file | grep -qw "UnitFileState=enabled"
                 if [ $? -eq 0 ]
                 then
-                        systemctl enable $file
+                        echo "systemctl start $file"
+                        systemctl start $file &
                 fi
+            done
         done
 }
 
