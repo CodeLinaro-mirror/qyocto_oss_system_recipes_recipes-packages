@@ -561,7 +561,13 @@ platform_do_upgrade() {
 	qcom,ipq9574-db-al01-c3 |\
 	qcom,ipq9574-db-al02-c1 |\
 	qcom,ipq9574-db-al02-c2 |\
-	qcom,ipq9574-db-al02-c3)
+	qcom,ipq9574-db-al02-c3 |\
+	qcom,ipq8074-ap-hk10-c1 |\
+	qcom,ipq8074-ap-hk10-c2 |\
+	qcom,ipq8074-ap-hk01-c1 |\
+	qcom,ipq8074-ap-hk14 |\
+	qcom,ipq8074-ap-hk10 |\
+	qcom,ipq8074-ap-hk09)
 		for sec in $(print_sections $1); do
 			flash_section ${sec}
 		done
@@ -626,7 +632,17 @@ platform_copy_config() {
 
 		mtdpart=$(grep "\"${mtdname}\"" /proc/mtd | awk -F: '{print $1}')
 		ubiattach -p /dev/${mtdpart}
-		mount -t ubifs ubi1:rootfs_data /tmp/overlay
+		volumes=$(ls /sys/class/ubi/*/ | grep ubi._.*)
+		for vol in ${volumes}
+		do
+			[ -f /sys/class/ubi/${vol}/name ] && name=$(cat /sys/class/ubi/${vol}/name)
+			if [[ ${vol} == "/sys/class/"* ]]; then
+				continue
+			else
+				[ ${name} == "rootfs_data" ] && m_vol=$(echo ${vol} | sed 's/_[^_]*//')
+			fi
+		done
+		mount -t ubifs ${m_vol}:rootfs_data /tmp/overlay
 		cp /tmp/sysupgrade.tgz /tmp/overlay/
 		sync
 		umount /tmp/overlay
