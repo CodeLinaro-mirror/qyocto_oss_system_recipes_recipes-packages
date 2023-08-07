@@ -565,6 +565,18 @@ platform_do_upgrade() {
 	qcom,ipq8074-ap-hk10-c1 |\
 	qcom,ipq8074-ap-hk10-c2 |\
 	qcom,ipq8074-ap-hk01-c1 |\
+	qcom,ipq8074-ap-hk01-c2 |\
+	qcom,ipq8074-ap-hk01-c3 |\
+	qcom,ipq8074-ap-hk01-c4 |\
+	qcom,ipq8074-ap-hk01-c5 |\
+	qcom,ipq8074-ap-hk01-c6 |\
+	qcom,ipq8074-ap-hk02 |\
+	qcom,ipq8074-ap-hk05 |\
+	qcom,ipq8074-ap-hk06 |\
+	qcom,ipq8074-ap-hk07 |\
+	qcom,ipq8074-ap-hk08 |\
+	qcom,ipq8074-db-hk01 |\
+	qcom,ipq8074-db-hk02 |\
 	qcom,ipq8074-ap-hk14 |\
 	qcom,ipq8074-ap-hk10 |\
 	qcom,ipq8074-ap-hk09)
