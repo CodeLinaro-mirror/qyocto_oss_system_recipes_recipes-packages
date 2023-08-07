@@ -58,31 +58,37 @@ ipq_board_detect() {
 		name="ap-dk07.1-c2"
 		;;
 	*"AP-HK01-C1")
-		name="ap-hk01-c1"
+		name="qcom,ipq8074-ap-hk01-c1"
 		;;
 	*"AP-HK01-C2")
-		name="ap-hk01-c2"
+		name="qcom,ipq8074-ap-hk01-c2"
 		;;
 	*"AP-HK01-C3")
-		name="ap-hk01-c3"
+		name="qcom,ipq8074-ap-hk01-c3"
 		;;
 	*"AP-HK01-C4")
-		name="ap-hk01-c4"
+		name="qcom,ipq8074-ap-hk01-c4"
+		;;
+	*"AP-HK01-C5")
+		name="qcom,ipq8074-ap-hk01-c5"
+		;;
+	*"AP-HK01-C6")
+		name="qcom,ipq8074-ap-hk01-c6"
 		;;
 	*"AP-HK02")
-		name="ap-hk02"
+		name="qcom,ipq8074-ap-hk02"
 		;;
 	*"AP-HK05")
-		name="ap-hk05"
+		name="qcom,ipq8074-ap-hk05"
 		;;
 	*"AP-HK06")
-		name="ap-hk06"
+		name="qcom,ipq8074-ap-hk06"
 		;;
 	*"AP-HK07")
-		name="ap-hk07"
+		name="qcom,ipq8074-ap-hk07"
 		;;
 	*"AP-HK08")
-		name="ap-hk08"
+		name="qcom,ipq8074-ap-hk08"
 		;;
 	*"AP-HK09")
 		name="qcom,ipq8074-ap-hk09"
@@ -106,10 +112,10 @@ ipq_board_detect() {
 		name="ap-ac01.2"
 		;;
 	*"DB.HK01")
-		name="db-hk01"
+		name="qcom,ipq8074-db-hk01"
 		;;
 	*"DB.HK02")
-		name="db-hk02"
+		name="qcom,ipq8074-db-hk02"
 		;;
 	*"AP-AL01-C1")
 		name="qcom,ipq9574-ap-al01-c1"
