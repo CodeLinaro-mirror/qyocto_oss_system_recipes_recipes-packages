@@ -389,7 +389,9 @@ flash_section() {
 	# Look for pci mhi devices
 	for device in $(cat /sys/bus/pci/devices/*/device 2> /dev/null)
 	do
-		[ "${device}" = "0x1104" ] && [ qcn9000="true" ]
+		if [ "${device}" = "0x1104" ]; then
+			qcn9000="true"
+		fi
 	done
 
 	case "${sec}" in
