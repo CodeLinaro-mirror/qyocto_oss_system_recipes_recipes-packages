@@ -1,19 +1,14 @@
 FILESEXTRAPATHS_append := "${THISDIR}/file:"
-SRC_URI_append_class-native += "file://create-static-mke2fs.patch"
 
 EXTRA_OECONF +=" --enable-libblkid"
 
-do_install_prepend_class-native() {
-	cp ${WORKDIR}/build/misc/mke2fs.static  ${D}/../build/misc/mke2fs
-        cp ${WORKDIR}/build/misc/fsck.static  ${D}/../build/misc/fsck
-}
+LDFLAGS_class-native += " -L${WORKDIR}/sysroot-destdir${STAGING_DIR_NATIVE}/usr/lib/ -Wl,-rpath-link,${WORKDIR}/sysroot-destdir${STAGING_DIR_NATIVE}/usr/lib/ -Wl,-rpath,${WORKDIR}/sysroot-destdir${STAGING_DIR_NATIVE}/usr/lib/  "
 
 do_populate_sysroot_append_class-native() {
     bb.build.exec_func("my_custom_function",d)
 }
 
 my_custom_function() {
-    cp ${WORKDIR}/build/misc/fsck.static ${WORKDIR}/sysroot-destdir${STAGING_DIR_NATIVE}/sbin/fsck.ext2
-    cp ${WORKDIR}/build/misc/fsck.static ${WORKDIR}/sysroot-destdir${STAGING_DIR_NATIVE}/sbin/fsck.ext3
-    cp ${WORKDIR}/build/misc/fsck.static ${WORKDIR}/sysroot-destdir${STAGING_DIR_NATIVE}/sbin/fsck.ext4
+    cp ${WORKDIR}/build/misc/mke2fs ${WORKDIR}/sysroot-destdir${STAGING_DIR_NATIVE}/sbin/mkfs.ext4
+    cp ${WORKDIR}/build/e2fsck/e2fsck ${WORKDIR}/sysroot-destdir${STAGING_DIR_NATIVE}/sbin/e2fsck
 }
