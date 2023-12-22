@@ -3,7 +3,7 @@ SECTION = "ath12k-affinity"
 LICENSE = "ISC"
 LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/${LICENSE};md5=f3b90e78ea0cffb20bf5cca7947a896d"
 
-FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}/files:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}/files:"
 
 inherit systemd
 
@@ -20,7 +20,7 @@ do_install() {
         install -m 0644 ${WORKDIR}/ath-driver-init.service  ${D}${systemd_unitdir}/system
 }
 
-FILES_${PN} += " ${bindir}/*"
+FILES:${PN} += " ${bindir}/*"
 BBCLASSEXTEND += "native"
-SYSTEMD_SERVICE_${PN} += "ath-driver-init.service"
+SYSTEMD_SERVICE:${PN} += "ath-driver-init.service"
 

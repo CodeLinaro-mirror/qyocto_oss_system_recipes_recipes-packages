@@ -13,7 +13,7 @@ SRC_URI[md5sum] = "541ae1c50cc268056693608920e6c908"
 
 S = "${WORKDIR}/bridge-utils-1.6"
 
-do_install_append() {
+do_install:append() {
 	install -d ${D}/usr/sbin
 	install -m 0755 ${S}/brctl/brctl ${D}/usr/sbin
 }
