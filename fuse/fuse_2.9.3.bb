@@ -24,21 +24,21 @@ DEPENDS = "gettext-native"
 
 PACKAGES =+ "fuse-utils-dbg fuse-utils libulockmgr libulockmgr-dev libulockmgr-dbg"
 
-RRECOMMENDS_${PN} = "kernel-module-fuse"
+RRECOMMENDS:${PN} = "kernel-module-fuse"
 
-FILES_${PN} += "${libdir}/libfuse.so.*"
-FILES_${PN}-dev += "${libdir}/libfuse*.la"
+FILES:${PN} += "${libdir}/libfuse.so.*"
+FILES:${PN}-dev += "${libdir}/libfuse*.la"
 
-FILES_libulockmgr = "${libdir}/libulockmgr.so.*"
-FILES_libulockmgr-dev += "${libdir}/libulock*.la"
-FILES_libulockmgr-dbg += "${libdir}/.debug/libulock*"
+FILES:libulockmgr = "${libdir}/libulockmgr.so.*"
+FILES:libulockmgr-dev += "${libdir}/libulock*.la"
+FILES:libulockmgr-dbg += "${libdir}/.debug/libulock*"
 
 # Forbid auto-renaming to libfuse-utils
-FILES_fuse-utils = "${bindir} ${base_sbindir}"
-FILES_fuse-utils-dbg = "${bindir}/.debug ${base_sbindir}/.debug"
+FILES:fuse-utils = "${bindir} ${base_sbindir}"
+FILES:fuse-utils-dbg = "${bindir}/.debug ${base_sbindir}/.debug"
 DEBIAN_NOAUTONAME_fuse-utils = "1"
 DEBIAN_NOAUTONAME_fuse-utils-dbg = "1"
 
-do_install_append() {
+do_install:append() {
     rm -rf ${D}${base_prefix}/dev
 }

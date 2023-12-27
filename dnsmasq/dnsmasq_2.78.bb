@@ -1,6 +1,6 @@
 
 include recipes-support/dnsmasq/dnsmasq.inc
-FILESEXTRAPATHS_prepend := "${TOPDIR}/../meta-openembedded/meta-networking/recipes-support/dnsmasq/files/:"
+FILESEXTRAPATHS:prepend := "${TOPDIR}/../meta-openembedded/meta-networking/recipes-support/dnsmasq/files/:"
 
 LICENSE = "GPL-2.0+ & GPL-3.0"
 
