@@ -1,13 +1,13 @@
 LICENSE = "GPLv2+"
 
-FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 SRC_URI += "file://config_files"
 
-do_configure_append() {
+do_configure:append() {
 	touch ${S}/configs/${UBOOT_MACHINE}
 }
 
-do_install_append() {
+do_install:append() {
 	rm ${D}${sysconfdir}/fw_env.config
 	install -d ${D}/lib/
 	install -m 0755 ${WORKDIR}/config_files/uboot-envtools.sh ${D}/lib/
@@ -15,4 +15,4 @@ do_install_append() {
 	install -m 0755 ${WORKDIR}/config_files/ipq806x ${D}/etc/uci-defaults/30_uboot-envtools
 }
 
-FILES_${PN} += "${libdir}/* ${baselib}/* ${sysconfdir}/*"
+FILES:${PN} += "${libdir}/* ${baselib}/* ${sysconfdir}/*"

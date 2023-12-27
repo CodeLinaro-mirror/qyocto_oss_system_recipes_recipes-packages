@@ -26,7 +26,7 @@ PACKAGECONFIG[ipv6] = "--enable-ipv6, --disable-ipv6,"
 
 EXTRA_AUTORECONF += " -I m4"
 
-do_configure_prepend() {
+do_configure:prepend() {
     mkdir -p ${S}/m4
     if [ -f aclocal.m4 ]; then
         mv aclocal.m4 ${S}/m4
@@ -34,13 +34,13 @@ do_configure_prepend() {
     # AC_CHECK_LIB(dlpi.. was looking to host /lib
     sed -i 's:-L/lib::g' ./configure.in
 }
-do_configure_append() {
+do_configure:append() {
     sed -i 's:-L/usr/lib::' ./Makefile
     sed -i 's:-Wl,-rpath,${STAGING_LIBDIR}::' ./Makefile
     sed -i 's:-I/usr/include::' ./Makefile
 }
 
-do_install_append() {
+do_install:append() {
     # tcpdump 4.0.0 installs a copy to /usr/sbin/tcpdump.4.0.0
     rm -f ${D}${sbindir}/tcpdump.${PV}
 }

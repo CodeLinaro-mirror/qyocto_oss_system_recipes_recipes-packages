@@ -2,7 +2,7 @@ SUMMARY = "Tools for the Linux Standard Wireless Extension Subsystem"
 HOMEPAGE = "http://www.hpl.hp.com/personal/Jean_Tourrilhes/Linux/Tools.html"
 LICENSE = "GPLv2 & (LGPLv2.1 | MPL-1.1 | BSD)"
 LIC_FILES_CHKSUM = "file://COPYING;md5=94d55d512a9ba36caa9b7df079bae19f"
-FILESEXTRAPATHS_prepend := "${THISDIR}/patches:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/patches:"
 
 SECTION = "base"
 PE = "1"
@@ -29,8 +29,8 @@ SRC_URI[md5sum] = "e06c222e186f7cc013fd272d023710cb"
 SRC_URI[sha256sum] = "6fb80935fe208538131ce2c4178221bab1078a1656306bce8909c19887e2e5a1"
 
 S = "${WORKDIR}/wireless_tools.29"
-INSANE_SKIP_${PN} += "already-stripped"
-INSANE_SKIP_${PN} += "ldflags"
+INSANE_SKIP:${PN} += "already-stripped"
+INSANE_SKIP:${PN} += "ldflags"
 TARGET_CC_ARCH += "${LDFLAGS}"
 
 CFLAGS =+ "-I${S}"
@@ -50,6 +50,6 @@ do_install() {
 
 PACKAGES = "libiw libiw-dev ${PN} ${PN}-doc ${PN}-dbg"
 
-FILES_libiw = "${libdir}/*.so.*"
-FILES_libiw-dev = "${libdir}/*.a ${libdir}/*.so ${includedir}"
-FILES_${PN} = "${bindir} ${sbindir}/iw* ${base_sbindir} ${base_bindir} ${sysconfdir}/network"
+FILES:libiw = "${libdir}/*.so.*"
+FILES:libiw-dev = "${libdir}/*.a ${libdir}/*.so ${includedir}"
+FILES:${PN} = "${bindir} ${sbindir}/iw* ${base_sbindir} ${base_bindir} ${sysconfdir}/network"

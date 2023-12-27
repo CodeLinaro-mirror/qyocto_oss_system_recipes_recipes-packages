@@ -4,7 +4,7 @@ SECTION = "net"
 LICENSE = "BSD"
 LIC_FILES_CHKSUM = "file://LICENSE;md5=1d4b0366557951c84a94fabe3529f867"
 DEPENDS = "libpcap"
-RDEPENDS_${PN}-ptest += " make perl \
+RDEPENDS:${PN}-ptest += " make perl \
 	perl-module-file-basename \
 	perl-module-posix \
 	perl-module-carp"
@@ -25,13 +25,13 @@ PACKAGECONFIG[smi] = "--with-smi,--without-smi,libsmi"
 # Note: CVE-2018-10103 (SMB - partially fixed, but SMB printing disabled)
 PACKAGECONFIG[smb] = "--enable-smb,--disable-smb"
 EXTRA_AUTORECONF += "-I m4"
-do_configure_prepend() {
+do_configure:prepend() {
     mkdir -p ${S}/m4
     if [ -f aclocal.m4 ]; then
         mv aclocal.m4 ${S}/m4
     fi
 }
-do_install_append() {
+do_install:append() {
     # make install installs an unneeded extra copy of the tcpdump binary
     rm -f ${D}${sbindir}/tcpdump.${PV}
 }

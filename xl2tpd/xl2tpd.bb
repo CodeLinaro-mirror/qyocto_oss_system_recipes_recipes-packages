@@ -4,7 +4,7 @@ DEPENDS = "ppp virtual/kernel"
 
 LICENSE = "GPLv2"
 LIC_FILES_CHKSUM = "file://LICENSE;md5=0636e73ff0215e8d672dc4c32c317bb3"
-FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 
 SRCREV = "5faece38704ae32063abe1d25e199c03e6f44669"
 SRC_URI = "git://github.com/xelerance/xl2tpd.git \
@@ -44,9 +44,9 @@ do_install () {
 	install -m 0755 ${WORKDIR}/l2tp.sh ${D}/lib/netifd/proto/l2tp.sh
 }
 
-FILES_${PN} = "/lib/* ${datadir_native}/* ${bindir}/* ${prefix}/* ${sysconfdir}/*"
+FILES:${PN} = "/lib/* ${datadir_native}/* ${bindir}/* ${prefix}/* ${sysconfdir}/*"
 
-CONFFILES_${PN} += "${sysconfdir}/xl2tpd.conf ${sysconfdir}/default/xl2tpd"
+CONFFILES:${PN} += "${sysconfdir}/xl2tpd.conf ${sysconfdir}/default/xl2tpd"
 
 INITSCRIPT_PACKAGES = "${PN}"
-INITSCRIPT_NAME_${PN} = "xl2tpd"
+INITSCRIPT_NAME:${PN} = "xl2tpd"

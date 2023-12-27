@@ -22,4 +22,4 @@ do_install() {
 	install -m 755 ${S}/sysupgrade.conf ${D}/etc
 }
 
-FILES_${PN} += "${libdir}/* ${baselib}/* ${sysconfdir}/* /sbin ${base_libdir}/upgrade/*"
+FILES:${PN} += "${libdir}/* ${baselib}/* ${sysconfdir}/* /sbin ${base_libdir}/upgrade/*"
