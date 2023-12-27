@@ -20,14 +20,14 @@ SRC_URI[sha256sum] = "8f2c8a7f2bd89b0dfd228ed917815852f7c625b2bc0936304ac3ed63aa
 
 S = "${WORKDIR}/samba-${PV}/source3"
 
-FILES_${PN} = "${sbindir}/smbd \
+FILES:${PN} = "${sbindir}/smbd \
                ${sbindir}/nmbd \
                ${sbindir}/samba_multicall \
                ${sysconfdir}/samba \
                ${sysconfdir}/init.d/samba \
                ${sysconfdir}/config/samba \
 "
-CONFFILES_${PN} = "${sysconfdir}/samba/smb.conf.template"
+CONFFILES:${PN} = "${sysconfdir}/samba/smb.conf.template"
 
 EXTRA_OECONF += "\
            ac_cv_file__proc_sys_kernel_core_pattern=yes \
@@ -86,7 +86,7 @@ EXTRA_OECONF += "\
            --without-libsmbsharemodes \
 "
 
-do_configure_prepend () {
+do_configure:prepend () {
     ./script/mkversion.sh
     if [ ! -e acinclude.m4 ]; then
         touch aclocal.m4
@@ -103,7 +103,7 @@ do_compile () {
      base_do_compile
 }
 
-do_install_append() {
+do_install:append() {
     mkdir -p ${D}${sbindir}
     mkdir -p ${D}${sysconfdir}
     ln -sf /usr/sbin/samba_multicall ${D}${sbindir}/smbd
@@ -120,4 +120,4 @@ do_install_append() {
 
 INITSCRIPT_PACKAGES = "${PN}"
 INITSCRIPT_PARAMS = "defaults"
-INITSCRIPT_NAME_${PN} = "samba"
+INITSCRIPT_NAME:${PN} = "samba"
