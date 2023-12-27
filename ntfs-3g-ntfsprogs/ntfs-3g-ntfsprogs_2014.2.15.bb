@@ -6,7 +6,7 @@ LICENSE = "GPLv2 & LGPLv2"
 LIC_FILES_CHKSUM = "file://COPYING;md5=59530bdf33659b29e73d4adb9f9f6552 \
                     file://COPYING.LIB;md5=f30a9716ef3762e3467a2f62bf790f0a"
 
-FILESEXTRAPATHS_prepend := "${THISDIR}/files/:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/files/:"
 SRC_URI = " \
 	   http://tuxera.com/opensource/ntfs-3g_ntfsprogs-${PV}.tgz \
 	   file://01-fix-musl-build.patch \
@@ -26,18 +26,18 @@ EXTRA_OEMAKE = "LDCONFIG=echo"
 
 PACKAGES =+ "ntfs-3g ntfsprogs libntfs-3g"
 
-FILES_ntfs-3g = "${base_sbindir}/*.ntfs-3g ${bindir}/ntfs-3g* ${base_sbindir}/mount.ntfs"
-RDEPENDS_ntfs-3g += "fuse"
-RRECOMMENDS_ntfs-3g = "util-linux-mount"
+FILES:ntfs-3g = "${base_sbindir}/*.ntfs-3g ${bindir}/ntfs-3g* ${base_sbindir}/mount.ntfs"
+RDEPENDS:ntfs-3g += "fuse"
+RRECOMMENDS:ntfs-3g = "util-linux-mount"
 
-FILES_ntfsprogs = "${base_sbindir}/* ${bindir}/* ${sbindir}/*"
-FILES_libntfs-3g = "${libdir}/*${SOLIBS}"
+FILES:ntfsprogs = "${base_sbindir}/* ${bindir}/* ${sbindir}/*"
+FILES:libntfs-3g = "${libdir}/*${SOLIBS}"
 
-do_install_append() {
+do_install:append() {
     # Standard mount will execute the program /sbin/mount.TYPE
     # when called. Add the symbolic to let mount could find ntfs.
     ln -sf mount.ntfs-3g ${D}/${base_sbindir}/mount.ntfs
 }
 
 # Satisfy the -dev runtime dependency
-ALLOW_EMPTY_${PN} = "1"
+ALLOW_EMPTY:${PN} = "1"
