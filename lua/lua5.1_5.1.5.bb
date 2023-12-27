@@ -18,12 +18,12 @@ S = "${WORKDIR}/lua-${PV}"
 inherit pkgconfig binconfig
 
 UCLIBC_PATCHES += "file://uclibc-pthread.patch"
-SRC_URI_append_libc-uclibc = "${UCLIBC_PATCHES}"
+SRC_URI:append_libc-uclibc = "${UCLIBC_PATCHES}"
 
 TARGET_CC_ARCH += " -fPIC ${LDFLAGS}"
 EXTRA_OEMAKE = "'CC=${CC} -fPIC' 'MYCFLAGS=${CFLAGS} -DLUA_USE_LINUX -fPIC' MYLDFLAGS='${LDFLAGS}'"
 
-do_configure_prepend() {
+do_configure:prepend() {
     sed -i -e s:/usr/local:${prefix}:g src/luaconf.h
     sed -i -e s:lib/lua/5.1/:${base_libdir}/lua/:g src/luaconf.h
 }
@@ -51,7 +51,7 @@ do_install () {
     install -m 0755 ${S}/src/luac ${D}/usr/bin/
 }
 
-FILES_${PN} += "${libdir}/* ${datadir_native}/* ${bindir}/* ${prefix}/*"
+FILES:${PN} += "${libdir}/* ${datadir_native}/* ${bindir}/* ${prefix}/*"
 
 BBCLASSEXTEND = "native"
 

@@ -22,5 +22,5 @@ do_install() {
 	install -m 0755 mtd ${D}/sbin/mtd
 }
 
-FILES_${PN} += "/sbin/*"
+FILES:${PN} += "/sbin/*"
 BBCLASSEXTEND += "native"
