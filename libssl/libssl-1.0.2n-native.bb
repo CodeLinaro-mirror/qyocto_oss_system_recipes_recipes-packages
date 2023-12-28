@@ -4,87 +4,38 @@ HOMEPAGE = "http://www.openssl.org/"
 BUGTRACKER = "http://www.openssl.org/news/vulnerabilities.html"
 SECTION = "libs/network"
 
-LICENSE = "openssl"
-LIC_FILES_CHKSUM = "file://LICENSE;md5=057d9218c6180e1d9ee407572b2dd225"
+LICENSE = "ISC"
+LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/${LICENSE};md5=f3b90e78ea0cffb20bf5cca7947a896d"
 
-PV="1.0.2n"
 
-SRC_URI = "http://www.openssl.org/source/openssl-${PV}.tar.gz \
+
+PV="3.7.2"
+
+SRC_URI = "https://mirrors.sonic.net/pub/OpenBSD/LibreSSL/libressl-${PV}.tar.gz \
           "
-S = "${WORKDIR}/openssl-${PV}"
+S = "${WORKDIR}/libressl-${PV}"
 
 
-SRC_URI[md5sum] = "13bdc1b1d1ff39b6fd42a255e74676a4"
-SRC_URI[sha256sum] = "370babb75f278c39e0c50e8c4e7493bc0f18db6867478341a832a982fd15a8fe"
+SRC_URI[md5sum] = "4bd44489df291ad710512888599fbd25"
+SRC_URI[sha256sum] = "b06aa538fefc9c6b33c4db4931a09a5f52d9d2357219afcbff7d93fe12ebf6f7"
 
 
-CFLAG = "${@oe.utils.conditional('SITEINFO_ENDIANNESS', 'le', '-DL_ENDIAN', '-DB_ENDIAN', d)} \
-         ${TERMIO} ${CFLAGS} -Wall -Wa,--noexecstack"
-CFLAG_append_class-native = " -fPIC"
 
-export DIRS = "crypto ssl apps"
-export EX_LIBS = "-lgcc -ldl"
-export AS = "${CC} -c"
-export DIRS = "crypto ssl apps engines"
-export OE_LDFLAGS="${LDFLAGS}"
-
-inherit native pkgconfig siteinfo multilib_header relative_symlinks
-
-CONFFILES_openssl-conf = "${sysconfdir}/ssl/openssl.cnf"
-
-# Remove this to enable SSLv3. SSLv3 is defaulted to disabled due to the POODLE
-# vulnerability
-EXTRA_OECONF = " -no-ssl3"
+inherit native
 
 do_configure () {
-        cd util
-        perl perlpath.pl ${STAGING_BINDIR_NATIVE}
-        cd ..
-        ln -sf apps/openssl.pod crypto/crypto.pod ssl/ssl.pod doc/
-
-        os=${HOST_OS}
-        case $os in
-        linux-gnueabi |\
-        linux-musl*)
-                os=linux
-                ;;
-                *)
-                ;;
-        esac
-        target="$os-${HOST_ARCH}"
-        echo "target=$target"
-        case $target in
-        linux-gnux32-x86_64)
-                target=linux-x32
-                ;;
-        linux-gnu64-x86_64)
-                target=linux-x86_64
-                ;;
-        esac
-        # inject machine-specific flags
-        sed -i -e "s|^\(\"$target\",\s*\"[^:]\+\):\([^:]\+\)|\1:${CFLAG}|g" Configure
-        useprefix=${prefix}
-        if [ "x$useprefix" = "x" ]; then
-                useprefix=/
-        fi
-        perl ./Configure ${EXTRA_OECONF} shared --prefix=$useprefix --openssldir=${libdir}/ssl --libdir=`basename ${libdir}` $target
+	./config
 }
 
-do_compile_prepend_class-target () {
-    sed -i 's/\((OPENSSL=\)".*"/\1"openssl"/' Makefile
-}
 
-do_install_class-native () {
-        # Create ${D}/${prefix} to fix parallel issues
-        mkdir -p ${D}/${prefix}/
-        oe_runmake INSTALL_PREFIX="${D}" MANDIR="${mandir}" install
+do_install:class-native () {
 
         install -d ${D}/${includedir}
-        install -d ${D}${STAGING_DIR_NATIVE}/usr/include/libssl-1.0.2n
+        install -d ${D}${STAGING_DIR_NATIVE}/usr/include/libressl-3.7.2/
         cp --dereference -R include/openssl ${D}/${includedir}
-        cp --dereference -R  ${D}${STAGING_DIR_NATIVE}/usr/include/openssl ${D}${STAGING_DIR_NATIVE}/usr/include/libssl-1.0.2n/
-        cp libssl.a  ${D}${STAGING_DIR_NATIVE}/usr/include/libssl-1.0.2n/
-        cp libcrypto.a  ${D}${STAGING_DIR_NATIVE}/usr/include/libssl-1.0.2n/
+        cp --dereference -R  ${D}${STAGING_DIR_NATIVE}/usr/include/openssl ${D}${STAGING_DIR_NATIVE}/usr/include/libressl-3.7.2/
+        cp ${S}/ssl/.libs/libssl.a  ${D}${STAGING_DIR_NATIVE}/usr/include/libressl-3.7.2/
+        cp ${S}/crypto/.libs/libcrypto.a  ${D}${STAGING_DIR_NATIVE}/usr/include/libressl-3.7.2/
 
         rm -rf ${D}${STAGING_DIR_NATIVE}/usr/include/openssl
         rm -rf ${D}${STAGING_DIR_NATIVE}/usr/lib
