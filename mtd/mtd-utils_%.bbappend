@@ -12,7 +12,7 @@ EXTRA_OECONF:class-native = "\
 DISABLE_STATIC = ""
 
 do_compile:class-native() {
-        make -C ${S}../build CC="${BUILD_CC}" LDFLAGS=""  ubinize
+        make -C ${S}/../build CC="${BUILD_CC}" LDFLAGS=""  ubinize
 }
 
 do_install:append:class-native() {
