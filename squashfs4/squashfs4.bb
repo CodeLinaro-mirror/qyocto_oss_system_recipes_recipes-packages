@@ -19,7 +19,7 @@ S = "${WORKDIR}/squashfs${PKG_VERSION}/"
 
 DEPENDS =" zlib xz "
 DEPENDS +="squashfs4-native"
-LDFLAGS_class-native = "-L${STAGING_LIBDIR_NATIVE}"
+LDFLAGS:class-native = "-L${STAGING_LIBDIR_NATIVE}"
 
 do_compile() {
 	make -C ${S}/squashfs-tools CROSS_COMPILE=${TARGET_PREFIX} XZ_SUPPORT=1 LZMA_XZ_SUPPORT=1 XATTR_SUPPORT=  mksquashfs unsquashfs
@@ -30,11 +30,11 @@ do_install() {
 	install -m 755 ${S}squashfs-tools/mksquashfs ${D}/usr/sbin/mksquashfs4
 	install -m 755 ${S}squashfs-tools/unsquashfs ${D}/usr/sbin/unsquashfs4
 }
-do_install_class-native() {
+do_install:class-native() {
 	mkdir -p ${DEPLOY_DIR_IMAGE}
 	install -m 755 ${S}squashfs-tools/mksquashfs ${DEPLOY_DIR_IMAGE}/mksquashfs4
 	install -m 755 ${S}squashfs-tools/unsquashfs ${DEPLOY_DIR_IMAGE}/unsquashfs4
 
 }
 BBCLASSEXTEND = "native nativesdk"
-INSANE_SKIP_${PN} = "ldflags"
+INSANE_SKIP:${PN} = "ldflags"

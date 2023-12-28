@@ -6,7 +6,7 @@ LIC_FILES_CHKSUM = "file://uci.h;endline=13;md5=0ee862ed12171ee619c8c2eb7eff77f2
 
 DEPENDS = "json-c libubox lua"
 
-RDEPENDS_${PN} = "lua"
+RDEPENDS:${PN} = "lua"
 
 inherit cmake pkgconfig
 inherit update-rc.d
@@ -26,7 +26,7 @@ EXTRA_OECMAKE += '-DLIBARCH=${baselib} \
             -DCMAKE_SHARED_LINKER_FLAGS:STRING="-L${STAGING_LIBDIR}" \
             -DCMAKE_FIND_ROOT_PATH=${STAGING_DIR_HOST}'
 
-do_install_append() {
+do_install:append() {
 	mkdir -p ${D}/etc/uci-defaults
 	mv ${D}/usr/bin ${D}/sbin
 
@@ -42,13 +42,13 @@ do_install_append() {
 	install -m 0755 ${WORKDIR}/config_files/sbin/wifi ${D}/sbin/wifi
 }
 
-FILES_${PN} += "${libdir}/* ${baselib}/* ${sysconfdir}/*"
+FILES:${PN} += "${libdir}/* ${baselib}/* ${sysconfdir}/*"
 
-FILES_${PN}-dbg += "${libdir}/lua/.debug"
+FILES:${PN}-dbg += "${libdir}/lua/.debug"
 
-FILES_${PN}-dev = "/usr/include/*"
+FILES:${PN}-dev = "/usr/include/*"
 
-INSANE_SKIP_${PN} = "dev-so"
+INSANE_SKIP:${PN} = "dev-so"
 
 BBCLASSEXTEND += "native"
 
