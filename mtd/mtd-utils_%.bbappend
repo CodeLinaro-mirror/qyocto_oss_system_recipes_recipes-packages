@@ -1,5 +1,5 @@
 SUMMARY = "Add support to ubinize"
-FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
 
 DEPENDS = "zlib e2fsprogs util-linux"
 
