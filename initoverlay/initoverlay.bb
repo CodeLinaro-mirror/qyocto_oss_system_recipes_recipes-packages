@@ -11,7 +11,7 @@ SRC_URI = "file://initoverlay"
 
 S = "${WORKDIR}/initoverlay"
 
-do_install_append() {
+do_install:append() {
 	mkdir -p ${D}/rom
 	mkdir -p ${D}/overlay
 	install -d ${D}/etc/init.d/
@@ -31,7 +31,7 @@ do_install_append() {
 	install -m 0644 ${WORKDIR}/initoverlay/initoverlay.service ${D}${systemd_unitdir}/system
 }
 
-FILES_${PN} += "${libdir}/* ${baselib}/* ${sysconfdir}/* /rom /overlay /sbin ${systemd_unitdir}/system/"
+FILES:${PN} += "${libdir}/* ${baselib}/* ${sysconfdir}/* /rom /overlay /sbin ${systemd_unitdir}/system/"
 
 BBCLASSEXTEND += "native"
-SYSTEMD_SERVICE_${PN} = "initoverlay.service"
+SYSTEMD_SERVICE:${PN} = "initoverlay.service"

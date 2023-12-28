@@ -12,7 +12,7 @@ SRC_URI = "file://ipq-boot \
 
 S = "${WORKDIR}/ipq-boot"
 
-do_install_append() {
+do_install:append() {
 	install -d ${D}/lib
 	install -d ${D}/sbin
 	install -d ${D}${bindir}
@@ -25,7 +25,7 @@ do_install_append() {
 	install -m 0644 ${WORKDIR}/ipq-boot/ipq-boot.service  ${D}${systemd_unitdir}/system
 }
 
-FILES_${PN} += "${libdir}/* ${baselib}/* ${sysconfdir}/* ${bindir}/*"
+FILES:${PN} += "${libdir}/* ${baselib}/* ${sysconfdir}/* ${bindir}/*"
 
 BBCLASSEXTEND += "native"
-SYSTEMD_SERVICE_${PN} += "ipq-boot.service"
+SYSTEMD_SERVICE:${PN} += "ipq-boot.service"
