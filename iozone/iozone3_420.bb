@@ -12,7 +12,7 @@ S = "${WORKDIR}/iozone3_420/src/current"
 EXTRA_OEMAKE_arm = "linux-arm CC='${CC}' GCC='${CC}'"
 EXTRA_OEMAKE = "linux CC='${CC}' GCC='${CC}'"
 
-TARGET_CC_ARCH += "${LDFLAGS}"
+TARGET_CC_ARCH += "${LDFLAGS} -fcommon"
 
 do_install() {
 	install -d ${D}/usr/sbin
