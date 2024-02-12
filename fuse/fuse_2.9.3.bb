@@ -14,6 +14,7 @@ SRC_URI = "${SOURCEFORGE_MIRROR}/fuse/fuse-${PV}.tar.gz \
            file://gold-unversioned-symbol.patch \
            file://aarch64.patch \
            file://001-fix_exec_environment_for_mount_and_umount.patch \
+           file://fuse2-0007-util-ulockmgr_server.c-conditionally-define-closefro.patch \
 "
 SRC_URI[md5sum] = "33cae22ca50311446400daf8a6255c6a"
 SRC_URI[sha256sum] = "0beb83eaf2c5e50730fc553406ef124d77bc02c64854631bdfc86bfd6437391c"
