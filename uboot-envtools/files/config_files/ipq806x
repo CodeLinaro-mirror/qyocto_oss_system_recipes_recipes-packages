@@ -15,6 +15,8 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
+. /lib/functions/boot.sh
+
 default_uboot_env () {
 	UBOOTENV_PART=$(cat /proc/mtd | grep APPSBLENV)
 	mtd_dev=$(echo $UBOOTENV_PART | awk '{print $1}' | sed 's/:$//')
@@ -33,14 +35,15 @@ default_uboot_env () {
 		mtd_erase=""
 	elif [ -n "$nor_flash" ]; then
 		uboot_env_size=$mtd_size
-		# mtd_erase=""
+		sectors=$(( $uboot_env_size / $mtd_erase ))
+		sectors=0x`printf "%x" $sectors`
 	else
 		# size is hardcoded to 0x40000 in u-boot
 		uboot_env_size=0x40000
-		# sectors=$(( $uboot_env_size / $mtd_erase ))
+		sectors=$(( $uboot_env_size / $mtd_erase ))
+		sectors=0x`printf "%x" $sectors`
 	fi
-	sectors=$(( $uboot_env_size / $mtd_erase ))
-	echo "/dev/$mtd_dev 0x0 $uboot_env_size $mtd_erase 0x$sectors" > /etc/fw_env.config
+	echo "/dev/$mtd_dev 0x0 $uboot_env_size $mtd_erase $sectors" > /etc/fw_env.config
 }
 
 default_uboot_env
