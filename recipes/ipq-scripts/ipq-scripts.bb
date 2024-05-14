@@ -19,6 +19,7 @@ do_install() {
     install -d ${D}/lib
     install -d ${D}/lib/functions
     install -d ${D}/sbin
+    install -d ${D}/usr/sbin/ipq
     install -d ${D}/etc/uci-defaults/
     install -d ${D}/etc/init.d/
 
@@ -26,7 +27,8 @@ do_install() {
     install -m 0755 ${WORKDIR}/files/lib/functions.sh ${D}/lib/
     install -m 0755 ${WORKDIR}/files/lib/functions/service.sh ${D}/lib/functions/
     install -m 0755 ${WORKDIR}/files/lib/functions/uci-defaults.sh ${D}/lib/functions/
-    install -m 0755 ${WORKDIR}/files/sbin/wifi ${D}/sbin/
+    install -m 0755 ${WORKDIR}/files/sbin/wifi ${D}/usr/sbin/ipq/
+    ln -sf /systemrw/wlan/bin/wifi ${D}/sbin/wifi
     install -m 0755 ${WORKDIR}/files/sbin/hotplug-call ${D}/sbin/
     install -m 0755 ${WORKDIR}/files/etc/rc.common ${D}/etc/rc.common
     install -m 0755 ${WORKDIR}/files/etc/uci-defaults/network ${D}/etc/uci-defaults/
