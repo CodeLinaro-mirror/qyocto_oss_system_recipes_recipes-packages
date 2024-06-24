@@ -1,6 +1,6 @@
-DESCRIPTION = "GPIO Button Hotplug Driver"
-LICENSE = "GPL-2-with-bison-exception"
-LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/${LICENSE};md5=676cb7fcf1214ecbe3be420dd5a5b967"
+DESCRIPTION = "Button Hotplug Driver"
+LICENSE = "GPL-2.0-only"
+LIC_FILES_CHKSUM = "file://${WORKDIR}/gpio-button-hotplug.c;md5=f1c7d29c55d50937aa584a63dcf1519b"
 
 inherit module
 
