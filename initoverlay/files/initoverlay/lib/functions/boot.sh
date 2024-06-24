@@ -43,6 +43,28 @@ find_mmc_part() {
         done
 }
 
+get_squashfs_size() {
+       dd if="$1" skip=8 bs=5 count=1 2> /dev/null | hexdump -v -n 4 -e '1/4 "%08d"'
+}
+
+find_loop_device() {
+
+       mmcpart="rootfs"
+       [ -f /proc/boot_info/bootconfig0/rootfs/upgradepartition ] && {
+           mmcpart=$(cat /proc/boot_info/bootconfig0/rootfs/upgradepartition)
+           [ "$mmcpart" == "rootfs" ] && mmcpart="rootfs_1" || mmcpart="rootfs"
+       }
+       emmcblock="$(find_mmc_part ${mmcpart})"
+       data_blockoffset="$(get_squashfs_size ${emmcblock})"
+       local loopdev="$(losetup -f)"
+       losetup -o $data_blockoffset $loopdev $emmcblock || {
+               echo "Failed to mount looped rootfs_data."
+               return 1
+       }
+       echo "$loopdev"
+}
+
+
 jffs2_ready () {
 	mtdpart="$(find_mtd_part rootfs_data)"
 	[ -z "$mtdpart" ] && return 1
