@@ -213,6 +213,9 @@ ipq_board_detect() {
 	*"AP-MI04.1-C2")
 		name="qcom,ipq5332-ap-mi04.1-c2"
 		;;
+	*"AP-MI01.13")
+		name="qcom,ipq5332-ap-mi01.13"
+		;;
 	esac
 
 	[ -z "$name" ] && name="unknown"
