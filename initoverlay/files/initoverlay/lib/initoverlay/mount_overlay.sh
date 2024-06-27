@@ -22,9 +22,11 @@ check_for_firstboot() {
 			mtd erase "$mtd_dev"
 		}
 	else
-		mount "$(find_mmc_part rootfs_data)" /tmp/test -t ext4 || {
-			mkfs.ext4 -F "$(find_mmc_part rootfs_data)"
+		loopdev=$(find_loop_device)
+		mount "$loopdev" /tmp/test -t ext4 || {
+			mkfs.ext4 -F "$loopdev"
 		}
+		[ -e "$loopdev" ] && losetup -d $loopdev
 	fi
 		umount /tmp/test &>/dev/null
 }
@@ -60,7 +62,6 @@ do_mount_ext4() {
     ldevice=$(find_loop_device)
     [ -e "$ldevice" ] || return 1
 
-    echo y | mkfs.ext4 -F -L rootfs_data $ldevice
     mkdir -p /tmp/overlay
     mount -t ext4 "$ldevice" /tmp/overlay -o loop,noatime &&
         pi_ext4_mount_success=true && pi_mount_skip_next=false
