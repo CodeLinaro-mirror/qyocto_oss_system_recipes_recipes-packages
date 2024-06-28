@@ -189,6 +189,15 @@ ipq_board_detect() {
 	*"AP-MI01.2")
 		name="qcom,ipq5332-ap-mi01.2"
 		;;
+	*"AP-MI01.2-C2")
+		name="qcom,ipq5332-ap-mi01.2-c2"
+		;;
+	*"AP-MI01.3")
+		name="qcom,ipq5332-ap-mi01.3"
+		;;
+	*"AP-MI01.3-C2")
+		name="qcom,ipq5332-ap-mi01.3-c2"
+		;;
 	*"AP-MI01.4")
 		name="qcom,ipq5332-ap-mi01.4"
 		;;
@@ -197,6 +206,12 @@ ipq_board_detect() {
 		;;
 	*"AP-MI01.7")
 		name="qcom,ipq5332-ap-mi01.7"
+		;;
+	*"AP-MI04.1")
+		name="qcom,ipq5332-ap-mi04.1"
+		;;
+	*"AP-MI04.1-C2")
+		name="qcom,ipq5332-ap-mi04.1-c2"
 		;;
 	esac
 

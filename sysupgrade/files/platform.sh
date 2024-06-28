@@ -124,7 +124,7 @@ do_flash_emmc() {
 	local bin=$1
 	local emmcblock=$2
 
-	dd if=/dev/zero of=${emmcblock}
+	dd if=/dev/zero of=${emmcblock} &> /dev/null
 	dd if=/tmp/${bin}.bin of=${emmcblock}
 }
 
@@ -284,6 +284,10 @@ do_flash_failsafe_ubi_volume() {
 	}
 	mtdpart=$(grep "\"${mtdname}\"" /proc/mtd | awk -F: '{print $1}')
 
+	if [ ! -n "$mtdpart" ]; then
+                echo "$mtdname is not available" && return
+        fi
+
 	ubiattach -p /dev/${mtdpart}
 
 	sync
@@ -366,6 +370,43 @@ get_fw_name() {
 		"8050c01"|\
 		"8050a01")
 			wifi_ipq="$img"_"$image_suffix"
+			;;
+
+		"8060000"|\
+		"8060001"|\
+		"8060003"|\
+		"8060006"|\
+		"1060001"|\
+		"1060002"|\
+		"8060201")
+			wifi_ipq="ipq5332_qcn9224_v2_single_dualmac"
+			;;
+
+		"8060002"|\
+		"8060004")
+			wifi_ipq="ipq5332_qcn6432cs"
+			;;
+
+		"1060003"|\
+		"8060107"|\
+		"8060102"|\
+		"8060007")
+			wifi_ipq="ipq5332_qcn6432"
+			;;
+
+		"8060202"|\
+		"8060302")
+			wifi_ipq="ipq5332_qcn9224_v2_qcn6432"
+			;;
+
+		"8060101")
+			wifi_ipq="ipq5332_qcn9224_v2_qcn9160"
+			;;
+		"8060008")
+			wifi_ipq="ipq5332_qcn6432cs_qcn9160"
+			;;
+		"8060402")
+			wifi_ipq="ipq5332_qcn9224_v2_qcn6432_qcn9160"
 			;;
 		*)
 			wifi_ipq=$img"_qcn9000"
@@ -581,7 +622,23 @@ platform_do_upgrade() {
 	qcom,ipq8074-db-hk02 |\
 	qcom,ipq8074-ap-hk14 |\
 	qcom,ipq8074-ap-hk10 |\
-	qcom,ipq8074-ap-hk09)
+	qcom,ipq8074-ap-hk09 |\
+	qcom,ipq5332-ap-mi01.2 |\
+        qcom,ipq5332-ap-mi01.2-c2 |\
+        qcom,ipq5332-ap-mi01.2-qcn9160-c1 |\
+        qcom,ipq5332-ap-mi01.3 |\
+        qcom,ipq5332-ap-mi01.3-c2 |\
+        qcom,ipq5332-ap-mi01.4 |\
+        qcom,ipq5332-ap-mi01.6 |\
+        qcom,ipq5332-ap-mi01.7 |\
+        qcom,ipq5332-ap-mi01.9 |\
+        qcom,ipq5332-ap-mi01.12 |\
+        qcom,ipq5332-ap-mi01.14 |\
+        qcom,ipq5332-ap-mi04.1 |\
+        qcom,ipq5332-ap-mi04.1-c2 |\
+        qcom,ipq5332-db-mi01.1 |\
+        qcom,ipq5332-db-mi02.1)
+
 		for sec in $(print_sections $1); do
 			flash_section ${sec}
 		done
@@ -619,6 +676,7 @@ platform_get_offset() {
                 esac
                 offsetcount=$(( $offsetcount + 1 ))
         done
+	echo $(( $offsetcount * 65536 ))
 }
 
 find_last_mtd_part() {
@@ -661,15 +719,27 @@ platform_copy_config() {
 		sync
 		umount /tmp/overlay
 	elif [ -e "$emmcblock" ]; then
-		local data_blockoffset="$(platform_get_offset $emmcblock)"
-		[ -z "$data_blockoffset" ] && {
-			emmcblock="$(find_mmc_part "rootfs_1")"
-			data_blockoffset="$(platform_get_offset $emmcblock)"
+		
+		local mmcpart="rootfs"
+
+		bin=$(get_bootconfig_name)
+		# losetup --detach-all
+		local loopdev="$(losetup -f)"
+		[ -f /proc/boot_info/$bin/rootfs/upgradepartition ] && {
+			mmcpart=$(cat /proc/boot_info/$bin/rootfs/upgradepartition)
+			[ "$mmcpart" == "rootfs" ] && mmcpart="rootfs_1" || mmcpart="rootfs"
 		}
-		local loopdev="$(find_mmc_part "rootfs_data")"
-		echo y | mkfs.ext4 $loopdev
+		
+		emmcblock="$(find_mmc_part ${mmcpart})"
+		data_blockoffset="$(get_squashfs_size ${emmcblock})"
+		losetup -o $data_blockoffset $loopdev $emmcblock || {
+			echo "Failed to mount looped rootfs_data."
+			reboot
+		}
+		echo y | mkfs.ext4 -F -L rootfs_data $loopdev
+		sync	
 		mount -t ext4 "$loopdev" /tmp/overlay
-		rm -rf /tmp/overlay/*
+		
 		cp /tmp/sysupgrade.tgz /tmp/overlay/
 		sync
 		umount /tmp/overlay
