@@ -22,9 +22,11 @@ check_for_firstboot() {
 			mtd erase "$mtd_dev"
 		}
 	else
-		mount "$(find_mmc_part rootfs_data)" /tmp/test -t ext4 || {
-			mkfs.ext4 -F "$(find_mmc_part rootfs_data)"
+		loopdev=$(find_loop_device)
+		mount "$loopdev" /tmp/test -t ext4 || {
+			mkfs.ext4 -F "$loopdev"
 		}
+		[ -e "$loopdev" ] && losetup -d $loopdev
 	fi
 		umount /tmp/test &>/dev/null
 }
@@ -54,12 +56,15 @@ ubifs_not_mounted() {
 }
 
 do_mount_ext4() {
-    check_skip && return
-    grep -wqs rootfs_data /sys/block/mmcblk*/*/uevent || return 1
+    #check_skip && return
+    #grep -wqs rootfs_data /sys/block/mmcblk*/*/uevent || return 1
+    
+    ldevice=$(find_loop_device)
+    [ -e "$ldevice" ] || return 1
 
     mkdir -p /tmp/overlay
-    mount "$(find_mmc_part rootfs_data)" /tmp/overlay -t ext4 &&
-        pi_ext4_mount_success=true
+    mount -t ext4 "$ldevice" /tmp/overlay -o loop,noatime &&
+        pi_ext4_mount_success=true && pi_mount_skip_next=false
 }
 
 find_mount_jffs2() {
