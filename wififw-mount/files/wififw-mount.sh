@@ -217,7 +217,7 @@ mount_wifi_fw (){
                 fi
         fi
 
-        do_load_ipq_board_bin
+        do_load_ipq4019_board_bin
 
         if [ -e /lib/firmware/$arch/WIFI_FW/board-2.bin ]; then
 
