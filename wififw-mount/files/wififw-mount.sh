@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+# Copyright (c) 2022,2024 Qualcomm Innovation Center, Inc. All rights reserved.
 #
 # Copyright (c) 2017-2022 The Linux Foundation. All rights reserved.
 # Permission to use, copy, modify, and/or distribute this software for any
@@ -77,7 +77,26 @@ mount_wifi_fw (){
         ;;
         esac
 
+	local age0=$(cat /proc/boot_info/bootconfig0/age)
+	local age1=$(cat /proc/boot_info/bootconfig1/age)
 	local bootname="bootconfig1"
+
+	#Try mode
+	if [ -e /proc/upgrade_info/trybit ]; then
+		if [ -e /proc/upgrade_info/trymode_inprogress ]; then
+			if [ $age0 -le $age1 ]; then
+				bootname="bootconfig0"
+			else
+				bootname="bootconfig1"
+			fi
+		else
+			if [ $age1 -ge $age0 ]; then
+				bootname="bootconfig1"
+			else
+				bootname="bootconfig0"
+			fi
+		fi
+	fi
 
 	primaryboot=$(cat /proc/boot_info/$bootname/$part_name/primaryboot)
         if [ $primaryboot -eq 1 ]; then
@@ -326,9 +345,21 @@ stop_wifi_fw() {
                 part_name="rootfs"
                 wifi_on_rootfs="1"
         fi
+	local age0=$(cat /proc/boot_info/bootconfig0/age)
+	local age1=$(cat /proc/boot_info/bootconfig1/age)
+	local bootname="bootconfig1"
 
-        primaryboot=$(cat /proc/boot_info/$part_name/primaryboot)
-        if [ $primaryboot -eq 1 ]; then
+	#Try mode
+	if [ -e /proc/upgrade_info/trybit ]; then
+		if [ $age1 -ge $age0 ]; then
+			bootname="bootconfig1"
+		else
+			bootname="bootconfig0"
+		fi
+	fi
+       
+       	primaryboot=$(cat /proc/boot_info/$bootname/$part_name/primaryboot)
+	if [ $primaryboot -eq 1 ]; then
                 part_name="${part_name}_1"
         fi
 
@@ -382,6 +413,7 @@ case "$1" in
                ipq_board_detect
         }
         boot
+	/lib/upgrade/trymodedone
         ;;
     stop)
 	stop
