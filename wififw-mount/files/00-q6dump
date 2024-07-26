@@ -19,7 +19,7 @@
 
 SERVER=$(/sbin/fw_printenv serverip | cut -c10-24);
 
-DEVICENAME=q6mem
+DEVICENAME=$1
 
 if [ ! -n "$SERVER" ]; then
 	printf "%s\n" "Wrong configuaration SERVER = $SERVER" > /dev/console
