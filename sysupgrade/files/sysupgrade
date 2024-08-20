@@ -291,11 +291,9 @@ fi
 
 echo $ALIVE > /tmp/.alive_upgrade
 
-type platform_check_image >/dev/null 2>/dev/null || {
-	echo "Firmware upgrade is not implemented for this platform." >&2
-	exit 1
-}
-
+if [ -n "$IMAGE" ] && type 'platform_check_image' >/dev/null 2>/dev/null; then
+        platform_check_image "$IMAGE"
+fi
 
 case "$IMAGE" in
 	http://*|\
