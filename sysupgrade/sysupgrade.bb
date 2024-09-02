@@ -8,7 +8,9 @@ SRC_URI = "file://platform.sh \
 	   file://trymodedone \
 	   file://sysupgrade \
 	   file://sysupgrade.conf \
+	   file://trymodedone.service \
 	"
+inherit systemd
 
 S = "${WORKDIR}"
 
@@ -16,12 +18,16 @@ do_install() {
 	install -d ${D}${base_libdir}/upgrade/
 	install -d  ${D}/sbin
 	install -d  ${D}/etc
+	install -d ${D}${systemd_unitdir}/system
 	install -m 0755 ${WORKDIR}/platform.sh ${D}/lib/upgrade/platform.sh
 	install -m 0755 ${WORKDIR}/common.sh ${D}/lib/upgrade/common.sh
 	install -m 0755 ${WORKDIR}/do_stage2 ${D}/lib/upgrade/do_stage2
 	install -m 0755 ${WORKDIR}/trymodedone ${D}/lib/upgrade/trymodedone
+	install -m 0755 ${WORKDIR}/trymodedone.service ${D}${systemd_unitdir}/system
 	install -m 755 ${S}/sysupgrade ${D}/sbin
 	install -m 755 ${S}/sysupgrade.conf ${D}/etc
 }
 
-FILES:${PN} += "${libdir}/* ${baselib}/* ${sysconfdir}/* /sbin ${base_libdir}/upgrade/*"
+FILES:${PN} += "${libdir}/* ${baselib}/* ${sysconfdir}/* /sbin ${base_libdir}/upgrade/* ${systemd_unitdir}/system/*"
+SYSTEMD_SERVICE:${PN} += "trymodedone.service"
+
