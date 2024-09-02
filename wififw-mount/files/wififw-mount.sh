@@ -102,9 +102,7 @@ mount_wifi_fw (){
         if [ $primaryboot -eq 1 ]; then
                 part_name="0:WIFIFW_1"
         fi
-        if [[ "$arch" == "IPQ9574" ]]; then
-                wifi_on_rootfs="1"
-        elif [[ "$arch" == "IPQ5332" ]]; then
+        if [[ "$arch" == "IPQ9574" ]] || [[ "$arch" == "IPQ5332" ]] || [[ "$arch" == "IPQ5424" ]]; then
                 wifi_on_rootfs="1"
         fi
 
@@ -318,14 +316,21 @@ mount_wifi_fw (){
 
 boot() {
  # . /lib/functions/system.sh
-        local platform=$(grep -ao "IPQ.*" /proc/device-tree/model | awk -F/ '{print $1}')
-        local board=$(grep -ao "IPQ.*" /proc/device-tree/model | awk -F/ '{print $2}')
+        if grep -q "IPQ5424" /proc/device-tree/model; then
+                local platform=$(grep -ao "IPQ.*" /proc/device-tree/model | awk '{print $1}')
+                local board=$(grep -ao "IPQ.*" /proc/device-tree/model | awk '{print $2}')
+        else
+                local platform=$(grep -ao "IPQ.*" /proc/device-tree/model | awk -F/ '{print $1}')
+                local board=$(grep -ao "IPQ.*" /proc/device-tree/model | awk -F/ '{print $2}')
+        fi
         if [ "$platform" == "IPQ9574" ]; then
                 mount_wifi_fw "IPQ9574"
         elif [ "$platform" == "IPQ5332" ]; then
                 mount_wifi_fw "IPQ5332"
         elif [ "$platform" == "IPQ8074" ]; then
                 mount_wifi_fw "IPQ8074"
+        elif [ "$platform" == "IPQ5424" ]; then
+                mount_wifi_fw "IPQ5424"
         else
                 echo "\nInvalid Target"
         fi
@@ -341,7 +346,7 @@ stop_wifi_fw() {
         local nor_flash=""
         arch=$1
 
-        if [[ "$arch" == "IPQ6018" ]] || [[ "$arch" == "IPQ5018" ]] || [[ "$arch" == "IPQ9574" ]] || [[ "$arch" == "IPQ5332" ]]; then
+        if [[ "$arch" == "IPQ6018" ]] || [[ "$arch" == "IPQ5018" ]] || [[ "$arch" == "IPQ9574" ]] || [[ "$arch" == "IPQ5332" ]] || [[ "$arch" == "IPQ5424" ]]; then
                 part_name="rootfs"
                 wifi_on_rootfs="1"
         fi
@@ -386,8 +391,13 @@ stop_wifi_fw() {
 
 
 stop() {
-        local platform=$(grep -ao "IPQ.*" /proc/device-tree/model | awk -F/ '{print $1}')
-        local board=$(grep -ao "IPQ.*" /proc/device-tree/model | awk -F/ '{print $2}')
+        if grep -q "IPQ5424" /proc/device-tree/model; then
+                local platform=$(grep -ao "IPQ.*" /proc/device-tree/model | awk '{print $1}')
+                local board=$(grep -ao "IPQ.*" /proc/device-tree/model | awk '{print $2}')
+        else
+                local platform=$(grep -ao "IPQ.*" /proc/device-tree/model | awk -F/ '{print $1}')
+                local board=$(grep -ao "IPQ.*" /proc/device-tree/model | awk -F/ '{print $2}')
+        fi
 
         if [ "$platform" == "IPQ9574" ]; then
                 stop_wifi_fw "IPQ9574"
@@ -395,6 +405,8 @@ stop() {
                 stop_wifi_fw "IPQ5332"
         elif [ "$platform" == "IPQ8074" ]; then
                 stop_wifi_fw "IPQ8074"
+        elif [ "$platform" == "IPQ5424" ]; then
+                stop_wifi_fw "IPQ5424"
         else
                 echo "\nInvalid Target"
                 return 0
