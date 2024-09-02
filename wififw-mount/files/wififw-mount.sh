@@ -413,7 +413,6 @@ case "$1" in
                ipq_board_detect
         }
         boot
-	/lib/upgrade/trymodedone
         ;;
     stop)
 	stop
