@@ -178,9 +178,11 @@ ipq_board_detect() {
 		name="qcom,ipq9574-ap-al02-c19"
 		;;
 	*"AP-AL05")
+		touch /tmp/fontanaenabled
 		name="qcom,ipq9574-ap-al05"
 		;;
 	*"AP-AL06")
+		touch /tmp/fontanaenabled
 		name="qcom,ipq9574-ap-al06"
 		;;
 	*"AP-MI01.1")
@@ -190,6 +192,7 @@ ipq_board_detect() {
 		name="qcom,ipq5332-ap-mi01.2"
 		;;
 	*"AP-MI01.2-C2")
+		touch /tmp/fontanaenabled
 		name="qcom,ipq5332-ap-mi01.2-c2"
 		;;
 	*"AP-MI01.3")
