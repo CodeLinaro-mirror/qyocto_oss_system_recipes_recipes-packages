@@ -2,17 +2,16 @@
  *  Button Hotplug driver
  *
  *  Copyright (C) 2008-2010 Gabor Juhos <juhosg@openwrt.org>
- *  Copyright (c) 2018, The Linux Foundation. All rights reserved.
  *
  *  Based on the diag.c - GPIO interface driver for Broadcom boards
  *    Copyright (C) 2006 Mike Baker <mbm@openwrt.org>,
- *    Copyright (C) 2006-2007 Felix Fietkau <nbd@openwrt.org>
+ *    Copyright (C) 2006-2007 Felix Fietkau <nbd@nbd.name>
  *    Copyright (C) 2008 Andy Boyett <agb@openwrt.org>
  *
  *  This program is free software; you can redistribute it and/or modify it
  *  under the terms of the GNU General Public License version 2 as published
  *  by the Free Software Foundation.
-*/
+ */
 
 #include <linux/module.h>
 #include <linux/version.h>
@@ -49,29 +48,15 @@
 struct bh_priv {
 	unsigned long		*seen;
 	struct input_handle	handle;
-	struct kobject      bh_kobj;
 };
 
 struct bh_event {
 	const char		*name;
 	char			*action;
 	unsigned long		seen;
-	struct bh_priv		*priv;
+
+	struct sk_buff		*skb;
 	struct work_struct	work;
-};
-
-static struct kset *bh_kset;
-
-static struct attribute *bh_attrs[] = {
-   NULL,
-};
-
-static struct sysfs_ops bh_attr_ops = {
-};
-
-static struct kobj_type bh_ktype = {
-   .default_attrs = bh_attrs,
-   .sysfs_ops     = &bh_attr_ops,
 };
 
 struct bh_map {
@@ -79,6 +64,7 @@ struct bh_map {
 	const char	*name;
 };
 
+extern u64 uevent_next_seqnum(void);
 
 #define BH_MAP(_code, _name)		\
 	{				\
@@ -99,30 +85,108 @@ static struct bh_map button_map[] = {
 	BH_MAP(BTN_9,		"BTN_9"),
 	BH_MAP(KEY_RESTART,	"reset"),
 	BH_MAP(KEY_POWER,	"power"),
+	BH_MAP(KEY_POWER2,	"reboot"),
 	BH_MAP(KEY_RFKILL,	"rfkill"),
 	BH_MAP(KEY_WPS_BUTTON,	"wps"),
 	BH_MAP(KEY_WIMAX,	"wwan"),
 };
 
+/* -------------------------------------------------------------------------*/
+
+static int bh_event_add_var(struct bh_event *event, int argv,
+		const char *format, ...)
+{
+	static char buf[128];
+	char *s;
+	va_list args;
+	int len;
+
+	if (argv)
+		return 0;
+
+	va_start(args, format);
+	len = vsnprintf(buf, sizeof(buf), format, args);
+	va_end(args);
+
+	if (len >= sizeof(buf)) {
+		BH_ERR("buffer size too small\n");
+		WARN_ON(1);
+		return -ENOMEM;
+	}
+
+	s = skb_put(event->skb, len + 1);
+	strcpy(s, buf);
+
+	BH_DBG("added variable '%s'\n", s);
+
+	return 0;
+}
+
+static int button_hotplug_fill_event(struct bh_event *event)
+{
+	int ret;
+
+	ret = bh_event_add_var(event, 0, "HOME=%s", "/");
+	if (ret)
+		return ret;
+
+	ret = bh_event_add_var(event, 0, "PATH=%s",
+					"/sbin:/bin:/usr/sbin:/usr/bin");
+	if (ret)
+		return ret;
+
+	ret = bh_event_add_var(event, 0, "SUBSYSTEM=%s", "button");
+	if (ret)
+		return ret;
+
+	ret = bh_event_add_var(event, 0, "ACTION=%s", event->action);
+	if (ret)
+		return ret;
+
+	ret = bh_event_add_var(event, 0, "BUTTON=%s", event->name);
+	if (ret)
+		return ret;
+
+	ret = bh_event_add_var(event, 0, "SEEN=%ld", event->seen);
+	if (ret)
+		return ret;
+
+	ret = bh_event_add_var(event, 0, "SEQNUM=%llu", uevent_next_seqnum());
+
+	return ret;
+}
+
 static void button_hotplug_work(struct work_struct *work)
 {
 	struct bh_event *event = container_of(work, struct bh_event, work);
-	struct bh_priv   *priv = event->priv;
-	char env_baction[32];
-	char env_button[32];
-	char env_seen[32];
-	char *envp[] = { env_baction, env_button, env_seen, NULL };
+	int ret = 0;
 
-	sprintf(env_baction, "ACTION=%s", event->action);
-	sprintf(env_button, "BUTTON=%s", event->name);
-	sprintf(env_seen, "SEEN=%ld", event->seen);
-	kobject_uevent_env(&priv->bh_kobj, KOBJ_CHANGE, envp);
+	event->skb = alloc_skb(BH_SKB_SIZE, GFP_KERNEL);
+	if (!event->skb)
+		goto out_free_event;
 
+	ret = bh_event_add_var(event, 0, "%s@", event->action);
+	if (ret)
+		goto out_free_skb;
+
+	ret = button_hotplug_fill_event(event);
+	if (ret)
+		goto out_free_skb;
+
+	NETLINK_CB(event->skb).dst_group = 1;
+	broadcast_uevent(event->skb, 0, 1, GFP_KERNEL);
+
+ out_free_skb:
+	if (ret) {
+		BH_ERR("work error %d\n", ret);
+		kfree_skb(event->skb);
+	}
+ out_free_event:
 	kfree(event);
 }
 
 static int button_hotplug_create_event(const char *name, unsigned long seen,
-		int pressed, struct bh_priv *thispriv)
+		int pressed)
 {
 	struct bh_event *event;
 
@@ -135,8 +199,7 @@ static int button_hotplug_create_event(const char *name, unsigned long seen,
 
 	event->name = name;
 	event->seen = seen;
-	event->action = pressed ? "add" : "remove";
-	event->priv = thispriv;
+	event->action = pressed ? "pressed" : "released";
 
 	INIT_WORK(&event->work, (void *)(void *)button_hotplug_work);
 	schedule_work(&event->work);
@@ -173,7 +236,7 @@ static void button_hotplug_event(struct input_handle *handle,
 		return;
 
 	button_hotplug_create_event(button_map[btn].name,
-			(seen - priv->seen[btn]) / HZ, value,priv);
+			(seen - priv->seen[btn]) / HZ, value);
 	priv->seen[btn] = seen;
 }
 
@@ -203,11 +266,6 @@ static int button_hotplug_connect(struct input_handler *handler,
 	priv->handle.handler = handler;
 	priv->handle.name = DRV_NAME;
 
-
-	priv->bh_kobj.kset = bh_kset;
-	ret = kobject_init_and_add(&priv->bh_kobj, &bh_ktype, NULL, "bh-%s", dev->name);
-	if (ret)
-		goto err_free_priv;
 	ret = input_register_handle(&priv->handle);
 	if (ret)
 		goto err_free_priv;
@@ -235,7 +293,6 @@ static void button_hotplug_disconnect(struct input_handle *handle)
 	input_close_device(handle);
 	input_unregister_handle(handle);
 
-	kobject_put(&priv->bh_kobj);
 	kfree(priv);
 }
 
@@ -266,11 +323,6 @@ static int __init button_hotplug_init(void)
 	int ret;
 
 	printk(KERN_INFO DRV_DESC " version " DRV_VERSION "\n");
-	bh_kset = kset_create_and_add("button", NULL, kernel_kobj);
-	if (!bh_kset) {
-		BH_ERR("unable to create kset\n");
-		return -ENOMEM;
-	}
 	ret = input_register_handler(&button_hotplug_handler);
 	if (ret)
 		BH_ERR("unable to register input handler\n");
@@ -282,7 +334,6 @@ module_init(button_hotplug_init);
 static void __exit button_hotplug_exit(void)
 {
 	input_unregister_handler(&button_hotplug_handler);
-	kset_unregister(bh_kset);
 }
 module_exit(button_hotplug_exit);
 
