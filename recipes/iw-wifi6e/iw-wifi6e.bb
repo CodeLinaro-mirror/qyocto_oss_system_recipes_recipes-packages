@@ -4,12 +4,12 @@ LIC_FILES_CHKSUM = "file://COPYING;md5=878618a5c4af25e9b93ef0be1a93f774"
 
 FILESEXTRAPATHS_prepend := "${THISDIR}/:"
 
-PV = "5.9"
+PV = "6.9"
 SRC_URI = "https://www.kernel.org/pub/software/network/iw/iw-${PV}.tar.xz \
 	   file://patches \
 	   "
-SRC_URI[md5sum] = "7a47d6f749ec69afcaf351166fd12f6f"
-SRC_URI[sha256sum] = "293a07109aeb7e36267cf59e3ce52857e9ffae3a6666eb8ac77894b1839fe1f2"
+SRC_URI[md5sum] = "457c99badf2913bb61a8407ae60e4819"
+SRC_URI[sha256sum] = "3f2db22ad41c675242b98ae3942dbf3112548c60a42ff739210f2de4e98e4894"
 
 DEPENDS = "libnl"
 S = "${WORKDIR}/iw-${PV}"

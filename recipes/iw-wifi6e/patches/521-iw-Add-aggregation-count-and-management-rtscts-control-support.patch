@@ -1,24 +1,5 @@
-From adcfb902b10eb942f39b12c7d6d0e591ef227c3f Mon Sep 17 00:00:00 2001
-From: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
-Date: Mon, 11 Oct 2021 11:24:23 +0530
-Subject: [PATCH] iw: Add aggregation count and management rtscts control
- support
-
-Add ampdu and amsdu count option for tid configuration and introduced
-corresponding nl attribute for the same. Added peer level configuration
-to enable/disable rtscts for management frames
-
-commands:
-iw dev wlanX set station <MAC address> mgmt_rts_cts <on|off>
-iw dev wlanX set tidconf tids 0x3 override ampdu <on [num]|off> amsdu <on [num]|off>
-Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
----
- bitrate.c   |  2 +-
- interface.c | 59 ++++++++++++++++++++++++++++++++++++++++++++++++++---------
- nl80211.h   |  8 ++++++++
- station.c   | 53 +++++++++++++++++++++++++++++++++++++++++++++++++++++
- 4 files changed, 112 insertions(+), 10 deletions(-)
-
+diff --git a/bitrate.c b/bitrate.c
+index 416ee0b..e3ec632 100644
 --- a/bitrate.c
 +++ b/bitrate.c
 @@ -405,7 +405,7 @@ next:
@@ -30,9 +11,11 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
  	if (!nl_rates)
  		goto nla_put_failure;
  
+diff --git a/interface.c b/interface.c
+index 1546b0c..e977fae 100644
 --- a/interface.c
 +++ b/interface.c
-@@ -891,6 +891,32 @@ COMMAND(set, tid_aggr_conf, "tid <tid> <
+@@ -932,6 +932,32 @@ COMMAND(set, tid_aggr_conf, "tid <tid> <[peer <MAC address>] aggr on|off>",
  	"Enable/disable aggregation for the TIDs ");
  
  
@@ -65,7 +48,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
  static int toggle_tid_param(const char *argv0, const char *argv1,
  			    struct nl_msg *msg, uint32_t attr)
  {
-@@ -967,7 +993,9 @@ static int handle_tid_config(struct nl80
+@@ -1008,7 +1034,9 @@ static int handle_tid_config(struct nl80211_state *state,
  				}
  
  				if (!tids_array) {
@@ -76,7 +59,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
  					if (!tids_array)
  						return -ENOBUFS;
  				}
-@@ -977,7 +1005,7 @@ static int handle_tid_config(struct nl80
+@@ -1018,7 +1046,7 @@ static int handle_tid_config(struct nl80211_state *state,
  					tids_num++;
  				}
  
@@ -85,7 +68,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
  				if (!tids_entry)
  					return -ENOBUFS;
  
-@@ -1015,8 +1043,16 @@ static int handle_tid_config(struct nl80
+@@ -1056,8 +1084,16 @@ static int handle_tid_config(struct nl80211_state *state,
  				if (ret)
  					return ret;
  
@@ -104,7 +87,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
  			} else if (strcmp(argv[0], "amsdu") == 0) {
  				if (argc < 2) {
  					fprintf(stderr, "not enough args for %s\n", argv[0]);
-@@ -1028,8 +1064,15 @@ static int handle_tid_config(struct nl80
+@@ -1069,8 +1105,15 @@ static int handle_tid_config(struct nl80211_state *state,
  				if (ret)
  					return ret;
  
@@ -122,7 +105,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
  			} else if (strcmp(argv[0], "noack") == 0) {
  				if (argc < 2) {
  					fprintf(stderr, "not enough args for %s\n", argv[0]);
-@@ -1137,7 +1180,7 @@ nla_put_failure:
+@@ -1178,7 +1221,7 @@ nla_put_failure:
  }
  
  COMMAND(set, tidconf, "[peer <MAC address>] tids <mask> [override] [sretry <num>] [lretry <num>] "
@@ -131,7 +114,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
  	"[bitrates <type [auto|fixed|limit]> [legacy-<2.4|5> <legacy rate in Mbps>*] [ht-mcs-<2.4|5> <MCS index>*]"
  	" [vht-mcs-<2.4|5> <NSS:MCSx,MCSy... | NSS:MCSx-MCSy>*] [sgi-2.4|lgi-2.4] [sgi-5|lgi-5]]",
  	NL80211_CMD_SET_TID_CONFIG, 0, CIB_NETDEV, handle_tid_config,
-@@ -1147,8 +1190,8 @@ COMMAND(set, tidconf, "[peer <MAC addres
+@@ -1188,8 +1231,8 @@ COMMAND(set, tidconf, "[peer <MAC address>] tids <mask> [override] [sretry <num>
  	"Examples:\n"
  	"  $ iw dev wlan0 set tidconf tids 0x1 ampdu off\n"
  	"  $ iw dev wlan0 set tidconf tids 0x5 ampdu off amsdu off rtscts on\n"
@@ -142,18 +125,20 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
 -	"  $ iw dev wlan0 set tidconf peer xx:xx:xx:xx:xx:xx tids 0x2 bitrates limit vht-mcs-5 4:9\n"
 +	"  $ iw dev wlan0 set tidconf peer xx:xx:xx:xx:xx:xx tids 0x2 bitrates limit legacy-5 ht-mcs-5 vht-mcs-5 he-mcs-5 2:3\n"
  	);
+diff --git a/nl80211.h b/nl80211.h
+index e7473a1..5912451 100644
 --- a/nl80211.h
 +++ b/nl80211.h
-@@ -3047,6 +3047,8 @@ enum nl80211_attrs {
+@@ -3401,6 +3401,8 @@ enum nl80211_attrs {
  
- 	NL80211_ATTR_WIPHY_ANTENNA_GAIN,
+ 	NL80211_ATTR_ASSOC_SPP_AMSDU,
  
 +	NL80211_ATTR_STA_MGMT_RTS_CTS_CONFIG,
 +
  	/* add attributes here, update the policy in nl80211.c */
  
  	__NL80211_ATTR_AFTER_LAST,
-@@ -4220,6 +4222,10 @@ enum nl80211_mesh_power_mode {
+@@ -4721,6 +4723,10 @@ enum nl80211_mesh_power_mode {
  	NL80211_MESH_POWER_MAX = __NL80211_MESH_POWER_AFTER_LAST - 1
  };
  
@@ -164,7 +149,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
  /**
   * enum nl80211_meshconf_params - mesh configuration parameters
   *
-@@ -5122,6 +5128,8 @@ enum nl80211_tid_config_attr {
+@@ -5672,6 +5678,8 @@ enum nl80211_tid_config_attr {
  	NL80211_TID_CONFIG_ATTR_AMSDU_CTRL,
  	NL80211_TID_CONFIG_ATTR_TX_RATE_TYPE,
  	NL80211_TID_CONFIG_ATTR_TX_RATE,
@@ -173,9 +158,11 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
  
  	/* keep last */
  	__NL80211_TID_CONFIG_ATTR_AFTER_LAST,
+diff --git a/station.c b/station.c
+index bf7c0f5..2223322 100644
 --- a/station.c
 +++ b/station.c
-@@ -715,6 +715,7 @@ static const struct cmd *station_set_vla
+@@ -739,6 +739,7 @@ static const struct cmd *station_set_vlan;
  static const struct cmd *station_set_mesh_power_mode;
  static const struct cmd *station_set_airtime_weight;
  static const struct cmd *station_set_txpwr;
@@ -183,7 +170,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
  
  static const struct cmd *select_station_cmd(int argc, char **argv)
  {
-@@ -730,6 +731,8 @@ static const struct cmd *select_station_
+@@ -754,6 +755,8 @@ static const struct cmd *select_station_cmd(int argc, char **argv)
  		return station_set_airtime_weight;
  	if (strcmp(argv[1], "txpwr") == 0)
  		return station_set_txpwr;
@@ -192,7 +179,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
  	return NULL;
  }
  
-@@ -995,6 +998,56 @@ COMMAND_ALIAS(station, set, "<MAC addres
+@@ -1019,6 +1022,56 @@ COMMAND_ALIAS(station, set, "<MAC address> txpwr <auto|limit> [<tx power dBm>]",
  	"Set Tx power for this station.",
  	select_station_cmd, station_set_txpwr);
  

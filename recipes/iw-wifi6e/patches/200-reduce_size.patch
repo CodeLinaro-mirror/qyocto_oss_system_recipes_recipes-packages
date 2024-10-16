@@ -1,6 +1,8 @@
+diff --git a/event.c b/event.c
+index dec50f0..8996398 100644
 --- a/event.c
 +++ b/event.c
-@@ -42,6 +42,7 @@ static int parse_beacon_hint_chan(struct
+@@ -43,6 +43,7 @@ static int parse_beacon_hint_chan(struct nlattr *tb,
  	return 0;
  }
  
@@ -8,7 +10,7 @@
  static void print_frame(struct print_event_args *args, struct nlattr *attr)
  {
  	uint8_t *frame;
-@@ -340,7 +341,7 @@ static void parse_vendor_event(struct nl
+@@ -343,7 +344,7 @@ static void parse_vendor_event(struct nlattr **attrs, bool dump)
  out:
  	printf("\n");
  }
@@ -17,7 +19,7 @@
  static void parse_nan_term(struct nlattr **attrs)
  {
  	struct nlattr *func[NL80211_NAN_FUNC_ATTR_MAX + 1];
-@@ -895,15 +896,18 @@ static void parse_ch_switch_notify(struc
+@@ -913,15 +914,18 @@ static void parse_assoc_comeback(struct nlattr **attrs, int command)
  static int print_event(struct nl_msg *msg, void *arg)
  {
  	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
@@ -35,9 +37,9 @@
  	__u16 status;
 +#endif
  
- 	if (args->time || args->reltime) {
+ 	if (args->time || args->reltime || args->ctime) {
  		unsigned long long usecs, previous;
-@@ -944,6 +948,7 @@ static int print_event(struct nl_msg *ms
+@@ -973,6 +977,7 @@ static int print_event(struct nl_msg *msg, void *arg)
  	}
  
  	switch (gnlh->cmd) {
@@ -45,7 +47,7 @@
  	case NL80211_CMD_NEW_WIPHY:
  		printf("renamed to %s\n", nla_get_string(tb[NL80211_ATTR_WIPHY_NAME]));
  		break;
-@@ -979,6 +984,7 @@ static int print_event(struct nl_msg *ms
+@@ -1008,6 +1013,7 @@ static int print_event(struct nl_msg *msg, void *arg)
  	case NL80211_CMD_SCHED_SCAN_RESULTS:
  		printf("got scheduled scan results\n");
  		break;
@@ -53,7 +55,7 @@
  	case NL80211_CMD_WIPHY_REG_CHANGE:
  	case NL80211_CMD_REG_CHANGE:
  		if (gnlh->cmd == NL80211_CMD_WIPHY_REG_CHANGE)
-@@ -1061,6 +1067,7 @@ static int print_event(struct nl_msg *ms
+@@ -1090,6 +1096,7 @@ static int print_event(struct nl_msg *msg, void *arg)
  		mac_addr_n2a(macbuf, nla_data(tb[NL80211_ATTR_MAC]));
  		printf("del station %s\n", macbuf);
  		break;
@@ -61,7 +63,7 @@
  	case NL80211_CMD_JOIN_IBSS:
  		mac_addr_n2a(macbuf, nla_data(tb[NL80211_ATTR_MAC]));
  		printf("IBSS %s joined\n", macbuf);
-@@ -1224,6 +1231,7 @@ static int print_event(struct nl_msg *ms
+@@ -1264,6 +1271,7 @@ static int print_event(struct nl_msg *msg, void *arg)
  	case NL80211_CMD_DEL_WIPHY:
  		printf("delete wiphy\n");
  		break;
@@ -69,8 +71,8 @@
  	case NL80211_CMD_PEER_MEASUREMENT_RESULT:
  		parse_pmsr_result(tb, args);
  		break;
-@@ -1255,8 +1263,7 @@ static int print_event(struct nl_msg *ms
- 		parse_ch_switch_notify(tb, gnlh->cmd);
+@@ -1298,8 +1306,7 @@ static int print_event(struct nl_msg *msg, void *arg)
+ 		parse_assoc_comeback(tb, gnlh->cmd);
  		break;
  	default:
 -		printf("unknown event %d (%s)\n",
@@ -79,9 +81,11 @@
  		break;
  	}
  
+diff --git a/info.c b/info.c
+index c5e863f..49b44c6 100644
 --- a/info.c
 +++ b/info.c
-@@ -19,6 +19,7 @@ static void print_flag(const char *name,
+@@ -19,6 +19,7 @@ static void print_flag(const char *name, int *open)
  	*open = 1;
  }
  
@@ -97,7 +101,7 @@
  
  static int ext_feature_isset(const unsigned char *ext_features, int ext_features_len,
  			     enum nl80211_ext_feature_index ftidx)
-@@ -95,20 +97,21 @@ static int print_phy_handler(struct nl_m
+@@ -312,19 +314,21 @@ static int print_phy_handler(struct nl_msg *msg, void *arg)
  		[NL80211_FREQUENCY_ATTR_RADAR] = { .type = NLA_FLAG },
  		[NL80211_FREQUENCY_ATTR_MAX_TX_POWER] = { .type = NLA_U32 },
  	};
@@ -112,20 +116,19 @@
 -	struct nlattr *nl_band;
 -	struct nlattr *nl_freq;
  	struct nlattr *nl_rate;
--	struct nlattr *nl_mode;
  	struct nlattr *nl_cmd;
  	struct nlattr *nl_if, *nl_ftype;
--	int rem_band, rem_freq, rem_rate, rem_mode, rem_cmd, rem_ftype, rem_if;
+-	int rem_band, rem_freq, rem_rate, rem_cmd, rem_ftype, rem_if;
 +	int rem_rate, rem_cmd, rem_ftype, rem_if;
 +#endif
 +	struct nlattr *nl_band;
 +	struct nlattr *nl_freq;
-+	struct nlattr *nl_mode;
-+	int rem_band, rem_freq, rem_mode;
++
++	int rem_band, rem_freq;
  	int open;
  	/*
  	 * static variables only work here, other applications need to use the
-@@ -216,6 +219,7 @@ next:
+@@ -446,6 +450,7 @@ next:
  				}
  			}
  
@@ -133,7 +136,7 @@
  			if (tb_band[NL80211_BAND_ATTR_RATES]) {
  			printf("\t\tBitrates (non-HT):\n");
  			nla_for_each_nested(nl_rate, tb_band[NL80211_BAND_ATTR_RATES], rem_rate) {
-@@ -232,6 +236,7 @@ next:
+@@ -462,6 +467,7 @@ next:
  				printf("\n");
  			}
  			}
@@ -141,7 +144,7 @@
  		}
  	}
  
-@@ -297,6 +302,7 @@ next:
+@@ -527,6 +533,7 @@ next:
  		printf("\tCoverage class: %d (up to %dm)\n", coverage, 450 * coverage);
  	}
  
@@ -149,7 +152,7 @@
  	if (tb_msg[NL80211_ATTR_CIPHER_SUITES]) {
  		int num = nla_len(tb_msg[NL80211_ATTR_CIPHER_SUITES]) / sizeof(__u32);
  		int i;
-@@ -308,6 +314,7 @@ next:
+@@ -538,6 +545,7 @@ next:
  					cipher_name(ciphers[i]));
  		}
  	}
@@ -157,21 +160,19 @@
  
  	if (tb_msg[NL80211_ATTR_WIPHY_ANTENNA_AVAIL_TX] &&
  	    tb_msg[NL80211_ATTR_WIPHY_ANTENNA_AVAIL_RX])
-@@ -327,11 +334,13 @@ next:
- 			printf("\t\t * %s\n", iftype_name(nla_type(nl_mode)));
- 	}
+@@ -555,9 +563,11 @@ next:
+ 		print_iftype_list("\tSupported interface modes", "\t\t",
+ 				  tb_msg[NL80211_ATTR_SUPPORTED_IFTYPES]);
  
 +#ifdef IW_FULL
- 	if (tb_msg[NL80211_ATTR_SOFTWARE_IFTYPES]) {
- 		printf("\tsoftware interface modes (can always be added):\n");
- 		nla_for_each_nested(nl_mode, tb_msg[NL80211_ATTR_SOFTWARE_IFTYPES], rem_mode)
- 			printf("\t\t * %s\n", iftype_name(nla_type(nl_mode)));
- 	}
+ 	if (tb_msg[NL80211_ATTR_SOFTWARE_IFTYPES])
+ 		print_iftype_list("\tsoftware interface modes (can always be added)",
+ 				  "\t\t", tb_msg[NL80211_ATTR_SOFTWARE_IFTYPES]);
 +#endif
  
  	if (tb_msg[NL80211_ATTR_INTERFACE_COMBINATIONS]) {
  		struct nlattr *nl_combi;
-@@ -428,6 +437,7 @@ broken_combination:
+@@ -647,6 +657,7 @@ broken_combination:
  			printf("\tinterface combinations are not supported\n");
  	}
  
@@ -179,7 +180,7 @@
  	if (tb_msg[NL80211_ATTR_SUPPORTED_COMMANDS]) {
  		printf("\tSupported commands:\n");
  		nla_for_each_nested(nl_cmd, tb_msg[NL80211_ATTR_SUPPORTED_COMMANDS], rem_cmd)
-@@ -525,6 +535,7 @@ broken_combination:
+@@ -744,6 +755,7 @@ broken_combination:
  				printf("\t\t * wake up on TCP connection\n");
  		}
  	}
@@ -187,7 +188,7 @@
  
  	if (tb_msg[NL80211_ATTR_ROAM_SUPPORT])
  		printf("\tDevice supports roaming.\n");
-@@ -563,6 +574,7 @@ broken_combination:
+@@ -782,6 +794,7 @@ broken_combination:
  		}
  	}
  
@@ -195,7 +196,7 @@
  	if (tb_msg[NL80211_ATTR_FEATURE_FLAGS]) {
  		unsigned int features = nla_get_u32(tb_msg[NL80211_ATTR_FEATURE_FLAGS]);
  
-@@ -630,6 +642,10 @@ broken_combination:
+@@ -849,6 +862,10 @@ broken_combination:
  
  	if (tb_msg[NL80211_ATTR_TDLS_SUPPORT])
  		printf("\tDevice supports T-DLS.\n");
@@ -206,7 +207,7 @@
  
  	if (tb_msg[NL80211_ATTR_EXT_FEATURES]) {
  		struct nlattr *tb = tb_msg[NL80211_ATTR_EXT_FEATURES];
-@@ -762,6 +778,7 @@ TOPLEVEL(list, NULL, NL80211_CMD_GET_WIP
+@@ -914,6 +931,7 @@ TOPLEVEL(list, NULL, NL80211_CMD_GET_WIPHY, NLM_F_DUMP, CIB_NONE, handle_info,
  	 "List all wireless devices and their capabilities.");
  TOPLEVEL(phy, NULL, NL80211_CMD_GET_WIPHY, NLM_F_DUMP, CIB_NONE, handle_info, NULL);
  
@@ -214,7 +215,7 @@
  static int handle_commands(struct nl80211_state *state, struct nl_msg *msg,
  			   int argc, char **argv, enum id_input id)
  {
-@@ -773,6 +790,7 @@ static int handle_commands(struct nl8021
+@@ -925,6 +943,7 @@ static int handle_commands(struct nl80211_state *state, struct nl_msg *msg,
  }
  TOPLEVEL(commands, NULL, NL80211_CMD_GET_WIPHY, 0, CIB_NONE, handle_commands,
  	 "list all known commands and their decimal & hex value");
@@ -222,17 +223,19 @@
  
  static int print_feature_handler(struct nl_msg *msg, void *arg)
  {
+diff --git a/scan.c b/scan.c
+index faf406d..9857561 100644
 --- a/scan.c
 +++ b/scan.c
-@@ -559,6 +559,7 @@ static void print_ssid(const uint8_t typ
- #define BSS_MEMBERSHIP_SELECTOR_VHT_PHY 126
- #define BSS_MEMBERSHIP_SELECTOR_HT_PHY 127
+@@ -593,6 +593,7 @@ static void print_supprates(const uint8_t type, uint8_t len,
+ 	printf("\n");
+ }
  
 +#ifdef IW_FULL
- static void print_supprates(const uint8_t type, uint8_t len,
+ static void print_rm_enabled_capabilities(const uint8_t type, uint8_t len,
  			    const uint8_t *data,
  			    const struct print_ies_data *ie_buffer)
-@@ -746,6 +747,7 @@ static void print_ap_channel_report(cons
+@@ -757,6 +758,7 @@ static void print_ap_channel_report(const uint8_t type, uint8_t len, const uint8
  	}
  	printf("\n");
  }
@@ -240,22 +243,7 @@
  
  static void print_cipher(const uint8_t *data)
  {
-@@ -1065,12 +1067,14 @@ static void print_rsn_ie(const char *def
- 	_print_rsn_ie(defcipher, defauth, len, data, 0);
- }
- 
-+#ifdef IW_FULL
- static void print_osen_ie(const char *defcipher, const char *defauth,
- 			  uint8_t len, const uint8_t *data)
- {
- 	printf("\n\t");
- 	_print_rsn_ie(defcipher, defauth, len, data, 1);
- }
-+#endif
- 
- static void print_rsn(const uint8_t type, uint8_t len, const uint8_t *data,
- 		      const struct print_ies_data *ie_buffer)
-@@ -1088,6 +1092,7 @@ static void print_ht_capa(const uint8_t
+@@ -1099,6 +1101,7 @@ static void print_ht_capa(const uint8_t type, uint8_t len, const uint8_t *data,
  	print_ht_mcs(data + 3);
  }
  
@@ -263,7 +251,7 @@
  static const char* ntype_11u(uint8_t t)
  {
  	switch (t) {
-@@ -1270,6 +1275,7 @@ static void print_tx_power_envelope(cons
+@@ -1281,6 +1284,7 @@ static void print_tx_power_envelope(const uint8_t type, uint8_t len,
  			printf("\t\t * %s: %i dBm\n", power_names[i], power_val);
  	}
  }
@@ -271,7 +259,7 @@
  
  static const char *ht_secondary_offset[4] = {
  	"no secondary",
-@@ -1297,6 +1303,7 @@ static void print_ht_op(const uint8_t ty
+@@ -1308,6 +1312,7 @@ static void print_ht_op(const uint8_t type, uint8_t len, const uint8_t *data,
  	printf("\t\t * secondary channel offset: %s\n",
  		ht_secondary_offset[data[1] & 0x3]);
  	printf("\t\t * STA channel width: %s\n", sta_chan_width[(data[1] & 0x4)>>2]);
@@ -279,7 +267,7 @@
  	printf("\t\t * RIFS: %d\n", (data[1] & 0x8)>>3);
  	printf("\t\t * HT protection: %s\n", protection[data[2] & 0x3]);
  	printf("\t\t * non-GF present: %d\n", (data[2] & 0x4) >> 2);
-@@ -1309,6 +1316,7 @@ static void print_ht_op(const uint8_t ty
+@@ -1320,6 +1325,7 @@ static void print_ht_op(const uint8_t type, uint8_t len, const uint8_t *data,
  	printf("\t\t * PCO phase: %d\n", (data[5] & 0x8) >> 3);
  }
  
@@ -287,7 +275,21 @@
  static void print_capabilities(const uint8_t type, uint8_t len,
  			       const uint8_t *data,
  			       const struct print_ies_data *ie_buffer)
-@@ -1486,6 +1494,7 @@ static void print_ibssatim(const uint8_t
+@@ -1484,6 +1490,7 @@ static void print_capabilities(const uint8_t type, uint8_t len,
+ 
+ 	printf("\n");
+ }
++#endif
+ 
+ static void print_tim(const uint8_t type, uint8_t len, const uint8_t *data,
+ 		      const struct print_ies_data *ie_buffer)
+@@ -1496,11 +1503,13 @@ static void print_tim(const uint8_t type, uint8_t len, const uint8_t *data,
+ 	printf("\n");
+ }
+ 
++#ifdef IW_FULL
+ static void print_ibssatim(const uint8_t type, uint8_t len, const uint8_t *data,
+ 			   const struct print_ies_data *ie_buffer)
  {
  	printf(" %d TUs\n", (data[1] << 8) + data[0]);
  }
@@ -295,15 +297,15 @@
  
  static void print_vht_capa(const uint8_t type, uint8_t len, const uint8_t *data,
  			   const struct print_ies_data *ie_buffer)
-@@ -1514,6 +1523,7 @@ static void print_vht_oper(const uint8_t
- 	printf("\t\t * VHT basic MCS set: 0x%.2x%.2x\n", data[4], data[3]);
+@@ -1563,6 +1572,7 @@ static void print_supp_op_classes(const uint8_t type, uint8_t len,
+ 		}
  }
  
 +#ifdef IW_FULL
- static void print_supp_op_classes(const uint8_t type, uint8_t len,
- 				  const uint8_t *data,
- 				  const struct print_ies_data *ie_buffer)
-@@ -1611,6 +1621,7 @@ static void print_obss_scan_params(const
+ static void print_measurement_pilot_tx(const uint8_t type, uint8_t len,
+ 				       const uint8_t *data,
+ 				       const struct print_ies_data *ie_buffer)
+@@ -1626,6 +1636,7 @@ static void print_obss_scan_params(const uint8_t type, uint8_t len,
  	printf("\t\t * OBSS Scan Activity Threshold: %d.%02d %%\n",
  		((data[13] << 8) | data[12]) / 100, ((data[13] << 8) | data[12]) % 100);
  }
@@ -311,7 +313,7 @@
  
  static void print_secchan_offs(const uint8_t type, uint8_t len,
  			       const uint8_t *data,
-@@ -1622,6 +1633,7 @@ static void print_secchan_offs(const uin
+@@ -1637,6 +1648,7 @@ static void print_secchan_offs(const uint8_t type, uint8_t len,
  		printf(" %d\n", data[0]);
  }
  
@@ -319,36 +321,40 @@
  static void print_bss_load(const uint8_t type, uint8_t len, const uint8_t *data,
  			   const struct print_ies_data *ie_buffer)
  {
-@@ -1663,6 +1675,7 @@ static void print_mesh_conf(const uint8_
- 	if (data[6] & 0x40)
- 		printf("\t\t\t Mesh Power Save Level\n");
+@@ -1773,6 +1785,7 @@ static void print_s1g_oper(const uint8_t type, uint8_t len,
+ 	printf("\t\t\tFor 3 SS: %s\n", s1g_ss_min_support(data[5] & 0x3));
+ 	printf("\t\t\tFor 4 SS: %s\n", s1g_ss_min_support((data[5] >> 4) & 0x3));
  }
 +#endif
  
  struct ie_print {
  	const char *name;
-@@ -1707,6 +1720,13 @@ static void print_ie(const struct ie_pri
- 
- static const struct ie_print ieprinters[] = {
- 	[0] = { "SSID", print_ssid, 0, 32, BIT(PRINT_SCAN) | BIT(PRINT_LINK), },
+@@ -1819,26 +1832,27 @@ static const struct ie_print ieprinters[] = {
+ 	[0] = { "SSID", print_ssid, 0, 32,
+ 		 BIT(PRINT_SCAN) | BIT(PRINT_LINK) | BIT(PRINT_LINK_MLO_MLD), },
+ 	[1] = { "Supported rates", print_supprates, 0, 255, BIT(PRINT_SCAN), },
+-	[3] = { "DS Parameter set", print_ds, 1, 1, BIT(PRINT_SCAN), },
 +	[45] = { "HT capabilities", print_ht_capa, 26, 26, BIT(PRINT_SCAN), },
 +	[48] = { "RSN", print_rsn, 2, 255, BIT(PRINT_SCAN), },
++	[50] = { "Extended supported rates", print_supprates, 0, 255, BIT(PRINT_SCAN), },
++	[59] = { "Supported operating classes", print_supp_op_classes, 1, 255, BIT(PRINT_SCAN), },
 +	[61] = { "HT operation", print_ht_op, 22, 22, BIT(PRINT_SCAN), },
 +	[62] = { "Secondary Channel Offset", print_secchan_offs, 1, 1, BIT(PRINT_SCAN), },
 +	[191] = { "VHT capabilities", print_vht_capa, 12, 255, BIT(PRINT_SCAN), },
 +	[192] = { "VHT operation", print_vht_oper, 5, 255, BIT(PRINT_SCAN), },
-+#ifdef IW_FULL
- 	[1] = { "Supported rates", print_supprates, 0, 255, BIT(PRINT_SCAN), },
- 	[3] = { "DS Parameter set", print_ds, 1, 1, BIT(PRINT_SCAN), },
  	[5] = { "TIM", print_tim, 4, 255, BIT(PRINT_SCAN), },
-@@ -1716,17 +1736,11 @@ static const struct ie_print ieprinters[
++#ifdef IW_FULL
++	[3] = { "DS Parameter set", print_ds, 1, 1, BIT(PRINT_SCAN), },
+ 	[6] = { "IBSS ATIM window", print_ibssatim, 2, 2, BIT(PRINT_SCAN), },
+ 	[7] = { "Country", print_country, 3, 255, BIT(PRINT_SCAN), },
+ 	[11] = { "BSS Load", print_bss_load, 5, 5, BIT(PRINT_SCAN), },
  	[32] = { "Power constraint", print_powerconstraint, 1, 1, BIT(PRINT_SCAN), },
  	[35] = { "TPC report", print_tpcreport, 2, 2, BIT(PRINT_SCAN), },
  	[42] = { "ERP", print_erp, 1, 255, BIT(PRINT_SCAN), },
 -	[45] = { "HT capabilities", print_ht_capa, 26, 26, BIT(PRINT_SCAN), },
  	[47] = { "ERP D4.0", print_erp, 1, 255, BIT(PRINT_SCAN), },
  	[51] = { "AP Channel Report", print_ap_channel_report, 1, 255, BIT(PRINT_SCAN), },
- 	[59] = { "Supported operating classes", print_supp_op_classes, 1, 255, BIT(PRINT_SCAN), },
+-	[59] = { "Supported operating classes", print_supp_op_classes, 1, 255, BIT(PRINT_SCAN), },
  	[66] = { "Measurement Pilot Transmission", print_measurement_pilot_tx, 1, 255, BIT(PRINT_SCAN), },
  	[74] = { "Overlapping BSS scan params", print_obss_scan_params, 14, 255, BIT(PRINT_SCAN), },
 -	[61] = { "HT operation", print_ht_op, 22, 22, BIT(PRINT_SCAN), },
@@ -356,29 +362,42 @@
 -	[191] = { "VHT capabilities", print_vht_capa, 12, 255, BIT(PRINT_SCAN), },
 -	[192] = { "VHT operation", print_vht_oper, 5, 255, BIT(PRINT_SCAN), },
 -	[48] = { "RSN", print_rsn, 2, 255, BIT(PRINT_SCAN), },
- 	[50] = { "Extended supported rates", print_supprates, 0, 255, BIT(PRINT_SCAN), },
+-	[50] = { "Extended supported rates", print_supprates, 0, 255, BIT(PRINT_SCAN), },
  	[70] = { "RM enabled capabilities", print_rm_enabled_capabilities, 5, 5, BIT(PRINT_SCAN), },
  	[113] = { "MESH Configuration", print_mesh_conf, 7, 7, BIT(PRINT_SCAN), },
-@@ -1736,8 +1750,10 @@ static const struct ie_print ieprinters[
- 	[108] = { "802.11u Advertisement", print_11u_advert, 0, 255, BIT(PRINT_SCAN), },
- 	[111] = { "802.11u Roaming Consortium", print_11u_rcon, 2, 255, BIT(PRINT_SCAN), },
- 	[195] = { "Transmit Power Envelope", print_tx_power_envelope, 2, 5, BIT(PRINT_SCAN), },
+ 	[114] = { "MESH ID", print_ssid, 0, 32, BIT(PRINT_SCAN) | BIT(PRINT_LINK), },
+@@ -1850,6 +1864,7 @@ static const struct ie_print ieprinters[] = {
+ 	[214] = { "Short beacon interval", print_short_beacon_int, 2, 2, BIT(PRINT_SCAN), },
+ 	[217] = { "S1G capabilities", print_s1g_capa, 15, 15, BIT(PRINT_SCAN), },
+ 	[232] = { "S1G operation", print_s1g_oper, 6, 6, BIT(PRINT_SCAN), },
 +#endif
  };
+ 
+ static void print_wifi_wpa(const uint8_t type, uint8_t len, const uint8_t *data,
+@@ -1865,6 +1880,7 @@ static void print_wifi_osen(const uint8_t type, uint8_t len,
+ 	print_osen_ie("OSEN", "OSEN", len, data);
+ }
  
 +#ifdef IW_FULL
- static void print_wifi_wpa(const uint8_t type, uint8_t len, const uint8_t *data,
- 			   const struct print_ies_data *ie_buffer)
+ static bool print_wifi_wmm_param(const uint8_t *data, uint8_t len)
  {
-@@ -2074,6 +2090,7 @@ static const struct ie_print wifiprinter
- 	[2] = { "WMM", print_wifi_wmm, 1, 255, BIT(PRINT_SCAN), },
- 	[4] = { "WPS", print_wifi_wps, 0, 255, BIT(PRINT_SCAN), },
- };
+ 	int i;
+@@ -2182,11 +2198,14 @@ static void print_wifi_wps(const uint8_t type, uint8_t len, const uint8_t *data,
+ 		printf("\n");
+ 	}
+ }
 +#endif
  
+ static const struct ie_print wifiprinters[] = {
+ 	[1] = { "WPA", print_wifi_wpa, 2, 255, BIT(PRINT_SCAN), },
++#ifdef IW_FULL
+ 	[2] = { "WMM", print_wifi_wmm, 1, 255, BIT(PRINT_SCAN), },
+ 	[4] = { "WPS", print_wifi_wps, 0, 255, BIT(PRINT_SCAN), },
++#endif
+ };
+ 
  static inline void print_p2p(const uint8_t type, uint8_t len,
- 			     const uint8_t *data,
-@@ -2169,6 +2186,7 @@ static inline void print_hs20_ind(const
+@@ -2283,6 +2302,7 @@ static inline void print_hs20_ind(const uint8_t type, uint8_t len,
  		printf("\t\tUnexpected length: %i\n", len);
  }
  
@@ -386,23 +405,31 @@
  static void print_wifi_owe_tarns(const uint8_t type, uint8_t len,
  				 const uint8_t *data,
  				 const struct print_ies_data *ie_buffer)
-@@ -2262,6 +2280,7 @@ static void print_vendor(unsigned char l
- 		printf(" %.2x", data[i]);
- 	printf("\n");
+@@ -2310,12 +2330,15 @@ static void print_wifi_owe_tarns(const uint8_t type, uint8_t len,
+ 		printf("\t\tChannel Info: %u\n", data[ssid_len + 8]);
+ 	}
  }
 +#endif
  
- void print_ies(unsigned char *ie, int ielen, bool unknown,
- 	       enum print_ie_type ptype)
-@@ -2279,6 +2298,7 @@ void print_ies(unsigned char *ie, int ie
- 		    ieprinters[ie[0]].flags & BIT(ptype)) {
- 			print_ie(&ieprinters[ie[0]],
- 				 ie[0], ie[1], ie + 2, &ie_buffer);
+ static const struct ie_print wfa_printers[] = {
+ 	[9] = { "P2P", print_p2p, 2, 255, BIT(PRINT_SCAN), },
+ 	[16] = { "HotSpot 2.0 Indication", print_hs20_ind, 1, 255, BIT(PRINT_SCAN), },
+ 	[18] = { "HotSpot 2.0 OSEN", print_wifi_osen, 1, 255, BIT(PRINT_SCAN), },
 +#ifdef IW_FULL
- 		} else if (ie[0] == 221 /* vendor */) {
+ 	[28] = { "OWE Transition Mode", print_wifi_owe_tarns, 7, 255, BIT(PRINT_SCAN), },
++#endif
+ };
+ 
+ static void print_vendor(unsigned char len, unsigned char *data,
+@@ -2436,6 +2459,7 @@ void print_ies(unsigned char *ie, int ielen, bool unknown,
  			print_vendor(ie[1], ie + 2, unknown, ptype);
+ 		} else if (ie[0] == 255 /* extension */) {
+ 			print_extension(ie[1], ie + 2, unknown, ptype);
++#ifdef IW_FULL
  		} else if (unknown) {
-@@ -2288,6 +2308,7 @@ void print_ies(unsigned char *ie, int ie
+ 			int i;
+ 
+@@ -2443,6 +2467,7 @@ void print_ies(unsigned char *ie, int ielen, bool unknown,
  			for (i=0; i<ie[1]; i++)
  				printf(" %.2x", ie[2+i]);
  			printf("\n");
@@ -410,7 +437,7 @@
  		}
  		ielen -= ie[1] + 2;
  		ie += ie[1] + 2;
-@@ -2328,6 +2349,7 @@ static void print_capa_non_dmg(__u16 cap
+@@ -2483,6 +2508,7 @@ static void print_capa_non_dmg(__u16 capa)
  		printf(" ESS");
  	if (capa & WLAN_CAPABILITY_IBSS)
  		printf(" IBSS");
@@ -418,7 +445,7 @@
  	if (capa & WLAN_CAPABILITY_CF_POLLABLE)
  		printf(" CfPollable");
  	if (capa & WLAN_CAPABILITY_CF_POLL_REQUEST)
-@@ -2356,6 +2378,7 @@ static void print_capa_non_dmg(__u16 cap
+@@ -2511,6 +2537,7 @@ static void print_capa_non_dmg(__u16 capa)
  		printf(" DelayedBACK");
  	if (capa & WLAN_CAPABILITY_IMM_BACK)
  		printf(" ImmediateBACK");
@@ -426,10 +453,10 @@
  }
  
  static int print_bss_handler(struct nl_msg *msg, void *arg)
-@@ -2440,8 +2463,10 @@ static int print_bss_handler(struct nl_m
- 	if (bss[NL80211_BSS_FREQUENCY]) {
- 		int freq = nla_get_u32(bss[NL80211_BSS_FREQUENCY]);
- 		printf("\tfreq: %d\n", freq);
+@@ -2601,8 +2628,10 @@ static int print_bss_handler(struct nl_msg *msg, void *arg)
+ 		else
+ 			printf("\tfreq: %d\n", freq);
+ 
 +#ifdef IW_FULL
  		if (freq > 45000)
  			is_dmg = true;
@@ -437,9 +464,11 @@
  	}
  	if (bss[NL80211_BSS_BEACON_INTERVAL])
  		printf("\tbeacon interval: %d TUs\n",
+diff --git a/util.c b/util.c
+index d36dbdc..68419c6 100644
 --- a/util.c
 +++ b/util.c
-@@ -147,6 +147,7 @@ const char *iftype_name(enum nl80211_ift
+@@ -147,6 +147,7 @@ const char *iftype_name(enum nl80211_iftype iftype)
  	return modebuf;
  }
  
@@ -447,7 +476,7 @@
  static const char *commands[NL80211_CMD_MAX + 1] = {
  #include "nl80211-commands.inc"
  };
-@@ -160,6 +161,7 @@ const char *command_name(enum nl80211_co
+@@ -160,6 +161,7 @@ const char *command_name(enum nl80211_commands cmd)
  	sprintf(cmdbuf, "Unknown command (%d)", cmd);
  	return cmdbuf;
  }
