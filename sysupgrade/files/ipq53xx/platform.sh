@@ -1,7 +1,7 @@
 #
-# Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
-#
 # Copyright (c) 2020, The Linux Foundation. All rights reserved.
+#
+# Copyright (c) 2022-2023, Qualcomm Innovation Center, Inc. All rights reserved.
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -19,29 +19,15 @@
 . /lib/functions/boot.sh
 . /lib/upgrade/common.sh
 
-
-RAMFS_COPY_DATA="/etc/fw_env.config /var/lock/fw_printenv.lock"
+RAMFS_COPY_DATA="/etc/fw_env.config /var/lock/fw_printenv.lock /tmp/firm_list.txt"
 RAMFS_COPY_BIN="/usr/bin/dumpimage /usr/sbin/ubiattach /usr/sbin/ubidetach
 	/usr/sbin/ubiformat /usr/sbin/ubiupdatevol /bin/rm /usr/bin/find
 	/usr/sbin/mkfs.ext4 /usr/sbin/fw_printenv /sbin/lsmod"
-
-get_full_section_name() {
-	local img=$1
-	local sec=$2
-
-	dumpimage -l ${img} | grep "^ Image.*(${sec})" | \
-		sed 's,^ Image.*(\(.*\)),\1,'
-}
 
 image_contains() {
 	local img=$1
 	local sec=$2
 	dumpimage -l ${img} | grep -q "^ Image.*(${sec}.*)" || return 1
-}
-
-print_sections() {
-	local img=$1
-	dumpimage -l ${img} | awk '/^ Image.*(.*)/ { print gensub(/Image .* \((.*)\)/,"\\1", $0) }'
 }
 
 image_has_mandatory_section() {
@@ -55,27 +41,68 @@ image_has_mandatory_section() {
 	done
 }
 
+parse_scr() {
+	local input_file=$1
+	local output_file=$2
+
+	if [ -e $output_file ]; then
+		echo " Output file exists removing it.... " > /dev/console
+		rm $output_file
+	fi
+
+	while IFS= read -r line; do
+		if echo "$line" | grep -q 'xtract_n_flash'; then
+			value=$(echo "$line" | awk '{print $3}')
+			label=$(echo "$line" | awk '{print $4}')
+
+			echo "$value $label" >> "$output_file"
+		fi
+	done < "$input_file"
+}
+
+extract_scr_file() {
+	local img=$1
+	local file_name=$2
+	local position=$3
+	local version=$(dumpimage -V 2>&1 | awk '{split($3, a, "."); print a[1]}')
+
+	if [ "$version" == "2016" ]; then
+		dumpimage -i ${img} -o ${file_name} -T flat_dt -p $position ${file_name} >/dev/null
+	else
+		dumpimage -o ${file_name} -T flat_dt -p $position ${img} >/dev/null
+	fi
+}
+
+extract_images() {
+	local img=$1
+	local output_file=$2
+	local version=$(dumpimage -V 2>&1 | awk '{split($3, a, "."); print a[1]}')
+
+	echo "Extracted Firmwares are ..."
+	while IFS= read -r line; do
+		image_name=$(echo $line | cut -d ' ' -f1)
+		echo $image_name
+		position=$(dumpimage -l ${img} |grep $image_name |cut -d ' ' -f3)
+		if [ "$version" == "2016" ]; then
+			dumpimage -i ${img} -o /tmp/${image_name}.bin -T flat_dt -p $position ${image_name} >/dev/null
+		else
+			dumpimage -o /tmp/${image_name}.bin -T flat_dt -p $position ${img} >/dev/null
+		fi
+	done < $output_file
+}
+
 image_demux() {
 	local img=$1
+	local machid=$(fw_printenv | grep machid | cut -d'=' -f2)
+	local script_file="script_${machid}"
+	local input_scr=/tmp/${script_file}.scr
+	local output_list=/tmp/firm_list.txt
+	local position=$(dumpimage -l ${img} |grep $script_file |cut -d ' ' -f3)
 
-	for sec in $(print_sections ${img}); do
-		local fullname=$(get_full_section_name ${img} ${sec})
+	extract_scr_file $img $input_scr $position
+	parse_scr $input_scr $output_list
+	extract_images $img $output_list
 
-		local position=$(dumpimage -l ${img} | grep "(${fullname})" | awk '{print $2}')
-		version=$(dumpimage -V 2>&1 | awk '{split($3, a, "."); print a[1]}')
-
-		if [ "$version" == "2016" ]; then
-			dumpimage -i ${img} -o /tmp/${fullname}.bin -T "flat_dt" -p "${position}" ${fullname} > /dev/null || { \
-				echo "Error while extracting \"${sec}\" from ${img}"
-				return 1
-			}
-		else
-			dumpimage -o /tmp/${fullname}.bin -T "flat_dt" -p "${position}" ${img} > /dev/null || { \
-				echo "Error while extracting \"${sec}\" from ${img}"
-				return 1
-			}
-		fi
-	done
 	return 0
 }
 
@@ -104,20 +131,8 @@ do_flash_mtd() {
 
 	local mtdpart_rootfs=$(grep "\"${mtdname_rootfs}\"" /proc/mtd | awk -F: '{print $1}')
 
-	# This switch is required only for QSPI NAND boot with 4K page size
-	# since PBL doesn't have 4K page support.
-	if [ "$mtdname" == "0:SBL1" -a -n "$boot_layout" -a -n "$flash_type" ]; then
-		mtd erase "/dev/${mtdpart}"
-		# ubidetach -f -p /dev/${mtdpart_rootfs}
-		# Switch to 2K layout for flashing (writing) SBL partition
-		echo 1 > $boot_layout
-		dd if=/tmp/${bin}.bin bs=${pgsz} conv=sync | mtd write - "/dev/${mtdpart}"
-		# Switch back to 4K layout for flashing (writing) all other partitions
-		echo 0 > $boot_layout
-	else
-		[ -f "$UPGRADE_BACKUP" -a "$2" == "rootfs" ] && append="-j $UPGRADE_BACKUP"
-		dd if=/tmp/${bin}.bin bs=${pgsz} conv=sync | mtd $append -e "/dev/${mtdpart}" write - "/dev/${mtdpart}"
-	fi
+	[ -f "$UPGRADE_BACKUP" -a "$2" == "rootfs" ] && append="-j $UPGRADE_BACKUP"
+	dd if=/tmp/${bin}.bin bs=${pgsz} conv=sync | mtd $append -e "/dev/${mtdpart}" write - "/dev/${mtdpart}"
 }
 
 do_flash_emmc() {
@@ -171,10 +186,6 @@ get_current_bootconfig() {
 	fi
 }
 
-
-
-
-
 do_flash_bootconfig() {
 	local bin=$1
 	local mtdname=$2
@@ -185,7 +196,6 @@ do_flash_bootconfig() {
 		do_flash_partition $bin $mtdname
 	fi
 }
-
 
 do_flash_failsafe_partition() {
 	local bin=$1
@@ -206,6 +216,7 @@ do_flash_failsafe_partition() {
 			echo $((primaryboot ^= 1)) > /proc/boot_info/$bcname/$default_mtd/primaryboot
 		}
 	done
+
 	emmcblock="$(find_mmc_part "$mtdname")"
 
 	if [ -e "$emmcblock" ]; then
@@ -226,9 +237,9 @@ do_flash_ubi() {
 	local primary_bcname
 
 	mtdpart=$(grep "\"${mtdname}\"" /proc/mtd | awk -F: '{print $1}')
-	
+
 	if [ $alive -eq 0 ]; then
-		ubidetach -p /dev/${mtdpart}
+		ubidetach -f -p /dev/${mtdpart}
 	fi
 
 	# Fail safe upgrade
@@ -266,14 +277,10 @@ do_flash_failsafe_ubi_volume() {
 	mtdpart=$(grep "\"${mtdname}\"" /proc/mtd | awk -F: '{print $1}')
 
 	if [ ! -n "$mtdpart" ]; then
-                echo "$mtdname is not available" && return
-        fi
+		echo "$mtdname is not available" && return
+	fi
 
 	ubiattach -p /dev/${mtdpart}
-
-	sync
-	sleep 3
-	sync
 
 	volumes=$(ls /sys/class/ubi/*/ | grep ubi._.*)
 
@@ -286,26 +293,6 @@ do_flash_failsafe_ubi_volume() {
 	ubiupdatevol /dev/${m_vol} /tmp/${tmpfile}
 }
 
-do_flash_tz() {
-	local sec=$1
-	local mtdpart=$(grep "\"0:QSEE\"" /proc/mtd | awk -F: '{print $1}')
-	local emmcblock="$(find_mmc_part "0:QSEE")"
-
-	if [ -n "$mtdpart" -o -e "$emmcblock" ]; then
-		do_flash_failsafe_partition ${sec} "0:QSEE"
-	fi
-}
-
-do_flash_ddr() {
-	local sec=$1
-	local mtdpart=$(grep "\"0:CDT\"" /proc/mtd | awk -F: '{print $1}')
-	local emmcblock="$(find_mmc_part "0:CDT")"
-
-	if [ -n "$mtdpart" -o -e "$emmcblock" ]; then
-		do_flash_failsafe_partition ${sec} "0:CDT"
-	fi
-}
-
 to_lower ()
 {
 	echo $1 | awk '{print tolower($0)}'
@@ -316,118 +303,24 @@ to_upper ()
 	echo $1 | awk '{print toupper($0)}'
 }
 
-image_is_nand()
-{
-	local nand_part="$(find_mtd_part "ubi_rootfs")"
-	[ -e "$nand_part" ] || return 1
-
-}
-
-get_fw_name() {
-	cat /proc/device-tree/model | grep -q 9574 && img="ipq9574"
-
-	wifi_ipq="ignored"
-	machineid=$(fw_printenv -l /tmp/. machid | cut -d '=' -f 2)
-	image_suffix1="qcn9224_v2_dualmac"
-	image_suffix2="qcn9000_qcn9224_v2"
-
-	image_suffix11="qcn9224_v2_single_dualmac"
-	image_suffix12="qcn6432cs"
-	image_suffix13="qcn6432"
-	image_suffix14="qcn9224_v2_qcn6432"
-	image_suffix15="qcn9224_v2_qcn9160"
-	case "${machineid}" in
-		"8050301"|\
-		"8050601"|\
-		"8050701"|\
-		"8050501"|\
-		"8050b01"|\
-		"8050102"|\
-		"8050002"|\
-		"8050003"|\
-		"8050004"|\
-		"8050801"|\
-		"8050d01"|\
-		"8051001"|\
-		"8051101"|\
-		"8051301"|\
-		"8050a01")
-			wifi_ipq="$img"_"$image_suffix1"
-			;;
-		"8050c01")
-			wifi_ipq="$img"_"$image_suffix2"
-			;;
-
-		"8060000"|\
-		"8060001"|\
-		"8060003"|\
-		"8060006"|\
-		"1060001"|\
-		"1060002"|\
-		"8060201")
-			wifi_ipq="ipq5332_"$image_suffix11
-			;;
-
-		"8060002"|\
-		"8060004")
-			wifi_ipq="ipq5332_"$image_suffix12
-			;;
-
-		"1060003"|\
-		"8060107"|\
-		"8060102"|\
-		"8060007")
-			wifi_ipq="ipq5332_"$image_suffix13
-			;;
-
-		"8060202"|\
-		"8060302")
-			wifi_ipq="ipq5332_"$image_suffix14
-			;;
-
-		"8060101")
-			wifi_ipq="ipq5332_"$image_suffix15
-			;;
-		"8060008")
-			wifi_ipq="ipq5332_qcn6432cs_qcn9160"
-			;;
-		"8060402")
-			wifi_ipq="ipq5332_qcn9224_v2_qcn6432_qcn9160"
-			;;
-		*)
-			[ "$img" == "ipq9574" ] && wifi_ipq="ipq9574_qcn9000" || wifi_ipq="ipq5332_qcn9224_v2_single_dualmac_qcn9160"
-			;;
-
-	esac
-
-	echo $wifi_ipq
-}
-
 flash_section() {
-	local sec=$1
-	local board=$(cat /tmp/sysinfo/board_name)
-	local board_model=$(to_lower $(grep -o "IPQ.*" /tmp/sysinfo/model | awk -F/ '{print $3}'))
+	local img=$1
+	local output_list=/tmp/firm_list.txt
 
-
-	case "${sec}" in
-		hlos*) image_is_nand && return || do_flash_failsafe_partition ${sec} "0:HLOS";;
-		rootfs*) image_is_nand && return || do_flash_failsafe_partition ${sec} "rootfs";;
-		wifi_fw_$(get_fw_name)-*) do_flash_failsafe_partition ${sec} "0:WIFIFW"; do_flash_failsafe_ubi_volume ${sec} "rootfs" "wifi_fw" ;;
-		ubi*) image_is_nand || return && do_flash_ubi ${sec} "rootfs";;
-		sbl1*) do_flash_partition ${sec} "0:SBL1"; \
-			do_flash_partition ${sec} "0:SBL1_1";;
-		u-boot*) do_flash_failsafe_partition ${sec} "0:APPSBL";;
-		ddr-$(to_upper $board_model)_*) do_flash_ddr ${sec};;
-		ddr-${board_model}-*) do_flash_failsafe_partition ${sec} "0:DDRCONFIG";;
-		tz*) do_flash_tz ${sec};;
-		tme*) do_flash_failsafe_partition ${sec} "0:TME";;
-		devcfg*) do_flash_failsafe_partition ${sec} "0:DEVCFG";;
-		apdp*) do_flash_failsafe_partition ${sec} "0:APDP";;
-		rpm*) do_flash_failsafe_partition ${sec} "0:RPM";;
-		*) echo "Section ${sec} ignored"; return 1;;
-	esac
-
-	echo "Flashed ${sec}"
+	while IFS= read -r line; do
+		image_name=$(echo $line | cut -d ' ' -f1)
+		partition=$(echo $line | cut -d ' ' -f2)
+		case "${image_name}" in
+			mibib*) echo " Section $image_name is ignored "; continue ;;
+			bootconfig*) echo " Section $image_name is ignored "; continue ;;
+			gpt*) echo " Section $image_name is ignored "; continue ;;
+			gptbackup*) echo " Section $image_name is ignored "; continue ;;
+			wifi_fw*) do_flash_failsafe_partition ${image_name} $partition; do_flash_failsafe_ubi_volume ${image_name} "rootfs" $partition ;;
+			ubi*) do_flash_ubi ${image_name} $partition;;
+			*) do_flash_failsafe_partition ${image_name} $partition;;
+		esac
+		echo "Flashed ${image_name}"
+	done < $output_list
 }
 
 erase_emmc_config() {
@@ -448,6 +341,7 @@ platform_check_image() {
 	local ddr_section="ddr"
 	local optional="sb11 sbl2 u-boot lkboot ddr-${board_model} tz rpm"
 	local ignored="mibib bootconfig"
+
 	image_is_FIT $1 || return 1
 
 	image_has_mandatory_section $1 ${mandatory_nand} && {\
@@ -493,6 +387,7 @@ platform_check_image() {
 		echo "Error: \"$1\" couldn't be extracted. Abort..."
 		return 1
 	}
+
 	[ -f /tmp/hlos_version ] && rm -f /tmp/*_version
 	dumpimage -c $1
 	if [[ "$?" == 0 ]];then
@@ -525,8 +420,10 @@ do_upgrade() {
 }
 
 platform_do_upgrade() {
+	local upgrade_set=true
 	local board=$(cat /tmp/sysinfo/board_name)
 	local alive=$(cat /tmp/.alive_upgrade)
+	local output_list=/tmp/firm_list.txt
 
 	# verify some things exist before erasing
 	if [ ! -e $1 ]; then
@@ -534,84 +431,18 @@ platform_do_upgrade() {
 		reboot
 	fi
 
-	for sec in $(print_sections $1); do
-		if [ ! -e /tmp/${sec}.bin ]; then
-			echo "Error: Cant' find ${sec} after switching to ramfs, aborting upgrade!"
+	while IFS= read -r line; do
+		image_name=$(echo $line | cut -d ' ' -f1)
+		if [ ! -e /tmp/${image_name}.bin ]; then
+			echo "Error: Cant' find ${image_name} after switching to ramfs, aborting upgrade!"
 			reboot
 		fi
-	done
+	done < $output_list
 
-	case "$board" in
-	qcom,ipq9574-ap-al01-c1 |\
-	qcom,ipq9574-ap-al02-c1 |\
-	qcom,ipq9574-ap-al03-c1 |\
-	qcom,ipq9574-ap-al03-c2 |\
-	qcom,ipq9574-ap-al02-c2 |\
-	qcom,ipq9574-ap-al02-c3 |\
-	qcom,ipq9574-ap-al02-c4 |\
-	qcom,ipq9574-ap-al02-c5 |\
-	qcom,ipq9574-ap-al02-c6 |\
-	qcom,ipq9574-ap-al02-c7 |\
-	qcom,ipq9574-ap-al02-c8 |\
-	qcom,ipq9574-ap-al02-c9 |\
-	qcom,ipq9574-ap-al02-c10 |\
-	qcom,ipq9574-ap-al02-c11 |\
-	qcom,ipq9574-ap-al02-c12 |\
-	qcom,ipq9574-ap-al02-c13 |\
-	qcom,ipq9574-ap-al02-c14 |\
-	qcom,ipq9574-ap-al02-c15 |\
-	qcom,ipq9574-ap-al02-c16 |\
-	qcom,ipq9574-ap-al02-c17 |\
-	qcom,ipq9574-ap-al02-c18 |\
-	qcom,ipq9574-ap-al02-c19 |\
-	qcom,ipq9574-ap-al02-c20 |\
-	qcom,ipq9574-ap-al05 |\
-	qcom,ipq9574-ap-al06 |\
-	qcom,ipq9574-db-al01-c1 |\
-	qcom,ipq9574-db-al01-c2 |\
-	qcom,ipq9574-db-al01-c3 |\
-	qcom,ipq9574-db-al02-c1 |\
-	qcom,ipq9574-db-al02-c2 |\
-	qcom,ipq9574-db-al02-c3 |\
-	qcom,ipq8074-ap-hk10-c1 |\
-	qcom,ipq8074-ap-hk10-c2 |\
-	qcom,ipq8074-ap-hk01-c1 |\
-	qcom,ipq8074-ap-hk01-c2 |\
-	qcom,ipq8074-ap-hk01-c3 |\
-	qcom,ipq8074-ap-hk01-c4 |\
-	qcom,ipq8074-ap-hk01-c5 |\
-	qcom,ipq8074-ap-hk01-c6 |\
-	qcom,ipq8074-ap-hk02 |\
-	qcom,ipq8074-ap-hk05 |\
-	qcom,ipq8074-ap-hk06 |\
-	qcom,ipq8074-ap-hk07 |\
-	qcom,ipq8074-ap-hk08 |\
-	qcom,ipq8074-db-hk01 |\
-	qcom,ipq8074-db-hk02 |\
-	qcom,ipq8074-ap-hk14 |\
-	qcom,ipq8074-ap-hk10 |\
-	qcom,ipq8074-ap-hk09 |\
-	qcom,ipq5332-ap-mi01.2 |\
-        qcom,ipq5332-ap-mi01.2-c2 |\
-        qcom,ipq5332-ap-mi01.2-qcn9160-c1 |\
-        qcom,ipq5332-ap-mi01.3 |\
-        qcom,ipq5332-ap-mi01.3-c2 |\
-        qcom,ipq5332-ap-mi01.4 |\
-        qcom,ipq5332-ap-mi01.6 |\
-        qcom,ipq5332-ap-mi01.7 |\
-        qcom,ipq5332-ap-mi01.9 |\
-        qcom,ipq5332-ap-mi01.12 |\
-        qcom,ipq5332-ap-mi01.14 |\
-        qcom,ipq5332-ap-mi04.1 |\
-        qcom,ipq5332-ap-mi04.1-c2 |\
-        qcom,ipq5332-db-mi01.1 |\
-        qcom,ipq5332-db-mi02.1)
+	case "$upgrade_set" in
+	true)
+		flash_section $1
 
-		for sec in $(print_sections $1); do
-			flash_section ${sec}
-		done
-
-		# update bootconfig to register that fw upgrade has been done
 		for bcname in $(get_alternate_bootconfig)
 		do
 			if [ $bcname = "bootconfig0" ]; then
@@ -770,7 +601,6 @@ platform_copy_config() {
 		# losetup --detach-all
 		local loopdev="$(losetup -f)"
 		[ "$upgradepart" == "rootfs" ] && upgradepart="rootfs_1" || upgradepart="rootfs"
-		
 		emmcblock="$(find_mmc_part ${upgradepart})"
 		data_blockoffset="$(get_squashfs_size ${emmcblock})"
 		losetup -o $data_blockoffset $loopdev $emmcblock || {
@@ -786,3 +616,4 @@ platform_copy_config() {
 	sync
 	umount /tmp/overlay
 }
+

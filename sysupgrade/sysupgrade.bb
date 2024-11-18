@@ -1,5 +1,5 @@
 DESCRIPTION = "Sysupgrade script"
-LICENSE = "GPL-2.0"
+LICENSE = "GPL-2.0-only"
 LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/${LICENSE};md5=801f80980d171dd6425610833a22dbe6"
 
 SRC_URI = "file://platform.sh \
@@ -9,7 +9,15 @@ SRC_URI = "file://platform.sh \
 	   file://sysupgrade \
 	   file://sysupgrade.conf \
 	   file://trymodedone.service \
+	   file://ipq53xx/platform.sh \
+	   file://ipq54xx/platform.sh \
 	"
+
+PLATFORMSCRIPTPATH:ipq95xx_64 = "${WORKDIR}/"
+PLATFORMSCRIPTPATH:ipq53xx_64 = "${WORKDIR}/ipq53xx/"
+PLATFORMSCRIPTPATH:ipq54xx_64 = "${WORKDIR}/ipq54xx/"
+
+
 inherit systemd
 
 S = "${WORKDIR}"
@@ -19,7 +27,7 @@ do_install() {
 	install -d  ${D}/sbin
 	install -d  ${D}/etc
 	install -d ${D}${systemd_unitdir}/system
-	install -m 0755 ${WORKDIR}/platform.sh ${D}/lib/upgrade/platform.sh
+	install -m 0755 ${PLATFORMSCRIPTPATH}/platform.sh ${D}/lib/upgrade/platform.sh
 	install -m 0755 ${WORKDIR}/common.sh ${D}/lib/upgrade/common.sh
 	install -m 0755 ${WORKDIR}/do_stage2 ${D}/lib/upgrade/do_stage2
 	install -m 0755 ${WORKDIR}/trymodedone ${D}/lib/upgrade/trymodedone
