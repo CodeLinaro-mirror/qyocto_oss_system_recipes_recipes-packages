@@ -328,7 +328,7 @@ get_fw_name() {
 
 	wifi_ipq="ignored"
 	machineid=$(fw_printenv -l /tmp/. machid | cut -d '=' -f 2)
-	image_suffix1="qcn9224_v2_dualmac"
+	image_suffix1="qcn9224_v2"
 	image_suffix2="qcn9000_qcn9224_v2"
 
 	image_suffix11="qcn9224_v2_single_dualmac"
