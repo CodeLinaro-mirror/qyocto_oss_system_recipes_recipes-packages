@@ -214,7 +214,7 @@ do_flash_ubi() {
 	mtdpart=$(grep "\"${mtdname}\"" /proc/mtd | awk -F: '{print $1}')
 
 	if [ $alive -eq 0 ]; then
-		ubidetach -f -p /dev/${mtdpart}
+		ubidetach -p /dev/${mtdpart}
 	fi
 
 	# Fail safe upgrade
