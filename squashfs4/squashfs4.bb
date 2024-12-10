@@ -1,28 +1,24 @@
 DESCRIPTION = "squashfs tools"
 LICENSE = "GPLv2"
-PKG_VERSION = "4.2"
-LIC_FILES_CHKSUM = "file://COPYING;md5=0636e73ff0215e8d672dc4c32c317bb3"
+PKG_VERSION = "4.6.1"
+LIC_FILES_CHKSUM = "file://COPYING;md5=b234ee4d69f5fce4486a80fdaf4a4263"
 
-SRC_URI = "https://codelinaro.jfrog.io/artifactory/codelinaro-qsdk/squashfs${PKG_VERSION}.tar.gz \
-	   file://100-portability.patch \
-	   file://110-allow_static_liblzma.patch \
-	   file://150-freebsd_fixes.patch \
-	   file://160-expose_lzma_xz_options.patch \
-	   file://170-add_support_for_LZMA_MAGIC_to_unsqashfs.patch \
-	   file://171-fix_gcc7_build.patch \
-	"
+SRC_URI = "https://codelinaro.jfrog.io/artifactory/codelinaro-qsdk/squashfs4-${PKG_VERSION}.tar.xz \
+	   file://001-xz_wrapper-support-multiple-lzma-configuration-optio.patch \
+	   file://002-xz_wrapper-make-new-OpenWrt-extended-options-non-def.patch \
+"
 
-SRC_URI[sha256sum] = "d9e0195aa922dbb665ed322b9aaa96e04a476ee650f39bbeadb0d00b24022e96"
-SRC_URI[md5sum] = "1b7a781fb4cf8938842279bd3e8ee852"
+SRC_URI[sha256sum] = "fc625af657ca284d69fbc32e3bb572d0afd566cf816b7c1c1b66dda0a0c2760a"
+SRC_URI[md5sum] = "f1db65146a33a810a7f3b09ada7acd6e"
 
-S = "${WORKDIR}/squashfs${PKG_VERSION}/"
+S = "${WORKDIR}/squashfs4-${PKG_VERSION}/"
 
 DEPENDS =" zlib xz "
 DEPENDS +="squashfs4-native"
 LDFLAGS:class-native = "-L${STAGING_LIBDIR_NATIVE}"
 
 do_compile() {
-	make -C ${S}/squashfs-tools CROSS_COMPILE=${TARGET_PREFIX} XZ_SUPPORT=1 LZMA_XZ_SUPPORT=1 XATTR_SUPPORT=  mksquashfs unsquashfs
+	make -C ${S}/squashfs-tools CROSS_COMPILE=${TARGET_PREFIX} XZ_SUPPORT=1 LZMA_XZ_SUPPORT=1 LDFLAGS+=-static XZ_EXTENDED_OPTIONS=1 mksquashfs unsquashfs
 }
 
 do_install() {
