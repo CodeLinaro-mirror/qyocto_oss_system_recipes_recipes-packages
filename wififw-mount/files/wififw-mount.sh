@@ -34,6 +34,78 @@ create_soft_link()
         fi
 }
 
+get_partname() {
+	local part_name=""
+	local parse_value=4
+	local mtdpart=$(grep "\"0:BOOTCONFIG\"" /proc/mtd | awk -F: '{print $1}')
+	local trymode_inprogress=$(cat /sys/devices/platform/firmware:scm/trymode_inprogress)
+
+	dd if=/dev/${mtdpart} of=/tmp/bootconfig.bin
+
+	dumpimage -b $parse_value &> /dev/null
+	if [[ "$?" == 1 ]];then
+		echo "Unable to read bootconfig"
+		return 1
+	fi
+
+	if [ ! -e /tmp/bootconfig_members.txt ]; then
+		echo " Parsed bootconfig info not available "
+		return 1
+	fi
+
+	local boot_set=$(grep "Boot-set" /tmp/bootconfig_members.txt | awk -F: '{print $2}')
+	local image_status_A=$(grep "Image-set-status-A" /tmp/bootconfig_members.txt | awk -F: '{print $2}')
+	local image_status_B=$(grep "Image-set-status-B" /tmp/bootconfig_members.txt | awk -F: '{print $2}')
+
+	if [ "$boot_set" -eq 0 ] && [ "$image_status_A" -ne 0 ]; then
+		part_name="1"
+	elif [ "$boot_set" -eq 1 ] && [ "$image_status_B" -eq 0 ]; then
+		part_name="1"
+	fi
+
+	if [ "$trymode_inprogress" -eq 1 ]; then
+		if [ "$part_name" -eq "1" ]; then
+			part_name=""
+		else
+			part_name="1"
+		fi
+	fi
+
+	echo $part_name
+}
+
+get_partname_legacy() {
+	local part_name=$1
+	local age0=$(cat /proc/boot_info/bootconfig0/age)
+	local age1=$(cat /proc/boot_info/bootconfig1/age)
+	local bootname="bootconfig1"
+
+	#Try mode
+	if [ -e /proc/upgrade_info/trybit ]; then
+		if [ -e /proc/upgrade_info/trymode_inprogress ]; then
+			if [ $age0 -le $age1 ]; then
+				bootname="bootconfig0"
+			else
+				bootname="bootconfig1"
+			fi
+		else
+			if [ $age1 -ge $age0 ]; then
+				bootname="bootconfig1"
+			else
+				bootname="bootconfig0"
+			fi
+		fi
+	fi
+
+	primaryboot=$(cat /proc/boot_info/$bootname/$part_name/primaryboot)
+	if [ $primaryboot -eq 1 ]; then
+		part_name="0:WIFIFW_1"
+	fi
+
+	echo $part_name
+}
+
+
 mount_wifi_fw (){
         local emmc_part=""
         local nand_part=""
@@ -49,6 +121,16 @@ mount_wifi_fw (){
 
         [ -f /tmp/sysinfo/board_name ] && {
                 board_name=ap$(cat /tmp/sysinfo/board_name | awk -F 'ap' '{print$2}')
+		if [ "$board_name" == "ap" ]; then
+			board_name=$(cat /tmp/sysinfo/board_name | awk -F, '{print$2}')
+		fi
+
+		case $board_name in
+                        *rdp*)
+                        board_name=$(echo $board_name | cut -f2 -d-)
+                        ;;
+                esac
+
         }
 
         [ -e /sys/firmware/devicetree/base/AUTO_MOUNT ] && {
@@ -77,31 +159,16 @@ mount_wifi_fw (){
         ;;
         esac
 
-	local age0=$(cat /proc/boot_info/bootconfig0/age)
-	local age1=$(cat /proc/boot_info/bootconfig1/age)
-	local bootname="bootconfig1"
-
-	#Try mode
-	if [ -e /proc/upgrade_info/trybit ]; then
-		if [ -e /proc/upgrade_info/trymode_inprogress ]; then
-			if [ $age0 -le $age1 ]; then
-				bootname="bootconfig0"
-			else
-				bootname="bootconfig1"
-			fi
-		else
-			if [ $age1 -ge $age0 ]; then
-				bootname="bootconfig1"
-			else
-				bootname="bootconfig0"
-			fi
+	if [ "$arch" == "IPQ5424" ]; then
+		local index=$(get_partname $part_name $arch)
+		if [ "$index" == "1" ]; then
+			part_name=${part_name}_${index}
+			ubi_part_name=${ubi_part_name}_${index}
 		fi
+	else
+		part_name=$(get_partname_legacy $part_name)
 	fi
 
-	primaryboot=$(cat /proc/boot_info/$bootname/$part_name/primaryboot)
-        if [ $primaryboot -eq 1 ]; then
-                part_name="0:WIFIFW_1"
-        fi
         if [[ "$arch" == "IPQ9574" ]] || [[ "$arch" == "IPQ5332" ]] || [[ "$arch" == "IPQ5424" ]]; then
                 wifi_on_rootfs="1"
         fi
@@ -132,9 +199,9 @@ mount_wifi_fw (){
                 fi
         elif [ -n "$nand_part" ]; then
                 if [ -n "$wifi_on_rootfs" ]; then
-                       local PART=$(grep -w  "rootfs" /proc/mtd | awk -F: '{print $1}')
+                       local PART=$(grep -w  "$ubi_part_name" /proc/mtd | awk -F: '{print $1}')
                 else
-                       local PART=$(grep -w  "WIFIFW" /proc/mtd | awk -F: '{print $1}')
+                       local PART=$(grep -w  "$part_name" /proc/mtd | awk -F: '{print $1}')
                 fi
                 ubiattach -p /dev/$PART
                 sync
@@ -350,23 +417,16 @@ stop_wifi_fw() {
                 part_name="rootfs"
                 wifi_on_rootfs="1"
         fi
-	local age0=$(cat /proc/boot_info/bootconfig0/age)
-	local age1=$(cat /proc/boot_info/bootconfig1/age)
-	local bootname="bootconfig1"
 
-	#Try mode
-	if [ -e /proc/upgrade_info/trybit ]; then
-		if [ $age1 -ge $age0 ]; then
-			bootname="bootconfig1"
-		else
-			bootname="bootconfig0"
-		fi
+	if [ "$arch" == "IPQ5424" ]; then
+                local index=$(get_partname $part_name $arch)
+                if [ "$index" == "1" ]; then
+                        part_name=${part_name}_${index}
+                        ubi_part_name=${part_name}_${index}
+                fi
+        else
+                part_name=$(get_partname_legacy $part_name)        
 	fi
-       
-       	primaryboot=$(cat /proc/boot_info/$bootname/$part_name/primaryboot)
-	if [ $primaryboot -eq 1 ]; then
-                part_name="${part_name}_1"
-        fi
 
         emmc_part=$(find_mmc_part $part_name 2> /dev/null)
         nor_part=$(cat /proc/mtd | grep -w "WIFIFW" | awk '{print $1}' | sed 's/:$//')
