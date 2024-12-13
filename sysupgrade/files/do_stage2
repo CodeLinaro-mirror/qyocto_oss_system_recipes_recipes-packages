@@ -10,8 +10,6 @@ if [ -n "$IMAGE" ] && type 'platform_pre_upgrade' >/dev/null 2>/dev/null; then
         platform_pre_upgrade "$IMAGE"
 fi
 
-platform_check_image "$IMAGE" >&2
-
 if type 'platform_do_upgrade' >/dev/null 2>/dev/null; then
 	platform_do_upgrade "$IMAGE"
 else
