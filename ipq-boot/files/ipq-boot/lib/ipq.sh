@@ -35,7 +35,7 @@ ipq_board_detect() {
 	echo "$IPQ_BOARD_NAME" > /tmp/sysinfo/board_name
 	echo "$IPQ_MODEL" > /tmp/sysinfo/model
 
-	if grep -Eq 'ap-al05|ap-al06|ap-mi02-c2' /tmp/sysinfo/board_name; then
+	if grep -Eq 'ap-al05|ap-al06|ap-mi01.2-c2|rdp485|rdp496' /tmp/sysinfo/board_name; then
 		touch /tmp/fontanaenabled
 	fi
 }
