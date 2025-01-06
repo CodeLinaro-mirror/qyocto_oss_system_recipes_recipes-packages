@@ -315,7 +315,7 @@ flash_section() {
 			bootconfig*) echo " Section $image_name is ignored "; continue ;;
 			gpt*) echo " Section $image_name is ignored "; continue ;;
 			gptbackup*) echo " Section $image_name is ignored "; continue ;;
-			wifi_fw*) do_flash_failsafe_partition ${image_name} $partition; do_flash_failsafe_ubi_volume ${image_name} "rootfs" $partition ;;
+			wifi_fw*) do_flash_failsafe_partition ${image_name} "0:WIFIFW"; do_flash_failsafe_ubi_volume ${image_name} "rootfs" $partition ;;
 			ubi*) do_flash_ubi ${image_name} $partition;;
 			*) do_flash_failsafe_partition ${image_name} $partition;;
 		esac
