@@ -1,6 +1,6 @@
 DESCRIPTION = "Button Hotplug Driver"
 LICENSE = "GPL-2.0-only"
-LIC_FILES_CHKSUM = "file://${WORKDIR}/gpio-button-hotplug.c;md5=f1c7d29c55d50937aa584a63dcf1519b"
+LIC_FILES_CHKSUM = "file://${WORKDIR}/gpio-button-hotplug.c;md5=6a849540aff2cad06ac9437dbf5c0c97"
 
 inherit module
 
