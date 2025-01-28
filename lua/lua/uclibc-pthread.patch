@@ -4,7 +4,7 @@ Index: lua-5.1.4/src/Makefile
 +++ a/src/Makefile	2013-10-22 22:18:27.992104545 -0400
 @@ -9,7 +9,7 @@
  CC= gcc
- CFLAGS= -O2 -Wall -DLUA_COMPAT_ALL $(SYSCFLAGS) $(MYCFLAGS)
+ CFLAGS= -O2 -Wall -Werror -DLUA_COMPAT_ALL $(SYSCFLAGS) $(MYCFLAGS)
  LDFLAGS= $(SYSLDFLAGS) $(MYLDFLAGS)
 -LIBS= -lm $(SYSLIBS) $(MYLIBS)
 +LIBS= -lm -lpthread $(SYSLIBS) $(MYLIBS)

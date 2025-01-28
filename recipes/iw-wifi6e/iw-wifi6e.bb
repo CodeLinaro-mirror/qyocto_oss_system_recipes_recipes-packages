@@ -14,7 +14,7 @@ SRC_URI[sha256sum] = "293a07109aeb7e36267cf59e3ce52857e9ffae3a6666eb8ac77894b183
 DEPENDS = "libnl"
 S = "${WORKDIR}/iw-${PV}"
 
-TARGET_CFLAGS += "-fpie -Wall -Werror -Wno-error=sign-compare"
+TARGET_CFLAGS += "-fpie -Wall -Werror"
 TARGET_LDFLAGS += "-pie -L${STAGING_LIBDIR}"
 TARGET_CPPFLAGS = "-I${STAGING_INCDIR}/libnl3 \
 		   ${TAGET_CPPFLAGS} \
