@@ -30,7 +30,7 @@ create_soft_link()
         if [ -e /sys/firmware/devicetree/base/AUTO_MOUNT ]; then
                 cp -f $*
         elif [ ! -e /sys/firmware/devicetree/base/AUTO_MOUNT ]; then
-                ln -sf $*
+                ln -s $*
         fi
 }
 
@@ -225,35 +225,35 @@ mount_wifi_fw (){
 
         if [ -d /lib/firmware/$arch/WIFI_FW/qcn9000 ]; then
                 cd  $fwfolder && mkdir -p qcn9000 && mkdir -p /vendor/firmware/qcn9000
-                cd qcn9000 && ln -sf /lib/firmware/$arch/WIFI_FW/qcn9000/*.* .
-                cd /vendor/firmware/qcn9000 && ln -sf /lib/firmware/$arch/WIFI_FW/qcn9000/Data.msc .
+                cd qcn9000 && ln -s /lib/firmware/$arch/WIFI_FW/qcn9000/*.* .
+                cd /vendor/firmware/qcn9000 && ln -s /lib/firmware/$arch/WIFI_FW/qcn9000/Data.msc .
                 mkdir -p /lib/firmware/qcn9000 && cd /lib/firmware/qcn9000 && create_soft_link /lib/firmware/$arch/WIFI_FW/qcn9000/qdss* .
         fi
 
         if [ -d /lib/firmware/$arch/WIFI_FW/qcn9224 ]; then
                 cd  $fwfolder && mkdir -p qcn9224 && mkdir -p /vendor/firmware/qcn9224
-                cd qcn9224 && ln -sf /lib/firmware/$arch/WIFI_FW/qcn9224/*.* .
-                cd /vendor/firmware/qcn9224 && ln -sf /lib/firmware/$arch/WIFI_FW/qcn9224/Data.msc .
+                cd qcn9224 && ln -s /lib/firmware/$arch/WIFI_FW/qcn9224/*.* .
+                cd /vendor/firmware/qcn9224 && ln -s /lib/firmware/$arch/WIFI_FW/qcn9224/Data.msc .
                 ln -s /lib/firmware/$arch/WIFI_FW/qcn9224/Data_dualmac.msc .
                 mkdir -p /lib/firmware/qcn9224 && cd /lib/firmware/qcn9224 && create_soft_link /lib/firmware/$arch/WIFI_FW/qcn9224/qdss* .
         fi
 
         if [ -d /lib/firmware/$arch/WIFI_FW/qcn9100 ]; then
                 cd $fwfolder && mkdir -p qcn9100 && mkdir -p /vendor/firmware/qcn9100
-                cd qcn9100 && ln -sf /lib/firmware/$arch/WIFI_FW/qcn9100/*.* . && ln -sf /lib/firmware/$arch/WIFI_FW/q6_fw.* .
-                cd /vendor/firmware/qcn9100 && ln -sf /lib/firmware/$arch/WIFI_FW/qcn9100/Data.msc .
+                cd qcn9100 && ln -s /lib/firmware/$arch/WIFI_FW/qcn9100/*.* . && ln -s /lib/firmware/$arch/WIFI_FW/q6_fw.* .
+                cd /vendor/firmware/qcn9100 && ln -s /lib/firmware/$arch/WIFI_FW/qcn9100/Data.msc .
                 mkdir -p /lib/firmware/qcn9100 && cd /lib/firmware/qcn9100 && create_soft_link /lib/firmware/$arch/WIFI_FW/qcn9100/qdss* .
         fi
 
         if [ -d /lib/firmware/$arch/WIFI_FW/qcn6122 ]; then
                 cd $fwfolder && mkdir -p qcn6122 && mkdir -p /vendor/firmware/qcn6122
-                cd qcn6122 && ln -sf /lib/firmware/$arch/WIFI_FW/qcn6122/*.* . && ln -sf /lib/firmware/$arch/WIFI_FW/q6_fw.* .
-                cd /vendor/firmware/qcn6122 && ln -sf /lib/firmware/$arch/WIFI_FW/qcn6122/Data.msc .
+                cd qcn6122 && ln -s /lib/firmware/$arch/WIFI_FW/qcn6122/*.* . && ln -s /lib/firmware/$arch/WIFI_FW/q6_fw.* .
+                cd /vendor/firmware/qcn6122 && ln -s /lib/firmware/$arch/WIFI_FW/qcn6122/Data.msc .
                 mkdir -p /lib/firmware/qcn6122 && cd /lib/firmware/qcn6122 && create_soft_link /lib/firmware/$arch/WIFI_FW/qcn6122/qdss* .
         elif [ -d /lib/firmware/$arch/WIFI_FW/qcn9100 ]; then
                 cd $fwfolder && mkdir -p qcn6122 && mkdir -p /vendor/firmware/qcn6122
-                cd qcn6122 && ln -sf /lib/firmware/$arch/WIFI_FW/qcn9100/*.* . && ln -sf /lib/firmware/$arch/WIFI_FW/q6_fw.* .
-                cd /vendor/firmware/qcn6122 && ln -sf /lib/firmware/$arch/WIFI_FW/qcn9100/Data.msc .
+                cd qcn6122 && ln -s /lib/firmware/$arch/WIFI_FW/qcn9100/*.* . && ln -s /lib/firmware/$arch/WIFI_FW/q6_fw.* .
+                cd /vendor/firmware/qcn6122 && ln -s /lib/firmware/$arch/WIFI_FW/qcn9100/Data.msc .
                 mkdir -p /lib/firmware/qcn6122 && cd /lib/firmware/qcn6122 && create_soft_link /lib/firmware/$arch/WIFI_FW/qcn9100/qdss* .
         fi
 
@@ -272,7 +272,7 @@ mount_wifi_fw (){
 	fi
 
         mkdir -p $fwfolder/$arch
-        cd  $fwfolder/$arch && ln -sf /lib/firmware/$arch/WIFI_FW/*.* .
+        cd  $fwfolder/$arch && ln -s /lib/firmware/$arch/WIFI_FW/*.* .
         cd  /lib/firmware/$arch && create_soft_link /lib/firmware/$arch/WIFI_FW/qdss* .
         if [ -e /sys/firmware/devicetree/base/MP_512 ] || [ -e /sys/firmware/devicetree/base/MP_256 ]; then
                 #qcn9224 INI file would have all QCN9224 RDP's info, so first priority for qcn9224 file if it exists
