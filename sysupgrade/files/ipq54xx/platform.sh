@@ -256,8 +256,11 @@ do_flash_failsafe_ubi_volume() {
 		[ -f /sys/class/ubi/${vol}/name ] && name=$(cat /sys/class/ubi/${vol}/name)
 			[ ${name} == ${vol_name} ] && m_vol=${vol}
 	done
-
+	sync
+	sleep 3
+	sync
 	ubiupdatevol /dev/${m_vol} /tmp/${tmpfile}
+	sync
 }
 
 to_lower ()
