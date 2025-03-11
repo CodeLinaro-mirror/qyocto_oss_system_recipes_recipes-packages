@@ -1,0 +1,126 @@
+From fe540d2d44c891b67eb08211ea59aa59a062d77b Mon Sep 17 00:00:00 2001
+From: Chenming Huang <quic_chenhuan@quicinc.com>
+Date: Fri, 22 Nov 2024 15:12:41 +0530
+Subject: [PATCH] iw: IE inforamtion prints enhancement
+
+Add HE operation element print and refine some other IE's prints,
+e.g., VHT operation element and HE capability element.
+
+Signed-off-by: Chenming Huang <quic_chenhuan@quicinc.com>
+---
+ scan.c | 64 +++++++++++++++++++++++++++++++++++++++++++++++++++++++---
+ util.c |  8 ++++----
+ 2 files changed, 65 insertions(+), 7 deletions(-)
+
+diff --git a/scan.c b/scan.c
+index feb57a7..732cb55 100644
+--- a/scan.c
++++ b/scan.c
+@@ -1550,9 +1550,9 @@ static void print_vht_oper(const uint8_t type, uint8_t len, const uint8_t *data,
+ {
+ 	const char *chandwidths[] = {
+ 		[0] = "20 or 40 MHz",
+-		[1] = "80 MHz",
+-		[3] = "80+80 MHz",
+-		[2] = "160 MHz",
++		[1] = "80 or 160 or 80+80 MHz",
++		[3] = "80+80 MHz (deprecated)",
++		[2] = "160 MHz (deprecated)",
+ 	};
+ 
+ 	printf("\n");
+@@ -1563,6 +1563,63 @@ static void print_vht_oper(const uint8_t type, uint8_t len, const uint8_t *data,
+ 	printf("\t\t * VHT basic MCS set: 0x%.2x%.2x\n", data[4], data[3]);
+ }
+ 
++static void print_he_oper(const uint8_t type, uint8_t len, const uint8_t *data,
++			   const struct print_ies_data *ie_buffer)
++{
++	uint8_t *parsed; // = (uint8_t*)data;
++
++	const char *chandwidths[] = {
++		[0] = "20 or 40 MHz",
++		[1] = "80 or 160 or 80+80 MHz",
++		[3] = "80+80 MHz (deprecated)",
++		[2] = "160 MHz (deprecated)",
++	};
++
++	const char *chandwidths_6ghz[] = {
++		[0] = "20 MHz",
++		[1] = "40 MHz",
++		[2] = "80 MHz",
++		[3] = "80+80 or 160 MHz",
++	};
++
++	printf("\n");
++
++	printf("\t\t * HE ops params: 0x%.2x%.2x%.2x\n", data[2], data[1], data[0]);
++	printf("\t\t * BSS color information: 0x%.2x\n", data[3]);
++	printf("\t\t * Basic HE-MCS and NSS set: 0x%.2x%.2x\n", data[5], data[4]);
++
++	parsed = (uint8_t *)&data[5];
++	if (data[1] & BIT(6)) {
++		uint8_t *vht_ops = parsed + 1;
++		printf("\n");
++		printf("\t\t * channel width: %d (%s)\n", vht_ops[0],
++			data[0] < ARRAY_SIZE(chandwidths) ? chandwidths[vht_ops[0]] : "unknown");
++		printf("\t\t * center freq segment 1: %d\n", vht_ops[1]);
++		printf("\t\t * center freq segment 2: %d\n", vht_ops[2]);
++		parsed += 3;
++	}
++
++	if (data[1] & BIT(7)) {
++		uint8_t *co_hosted = parsed + 1;
++		printf("\t\t * MAX Co-hosted BSSID: %d\n", 0x1 << co_hosted[0]);
++		parsed += 1;
++	}
++
++	if (data[2] & BIT(1)) {
++		uint8_t *axghz_ops = parsed + 1;
++		printf("\t\t * 6GHz operation information:\n");
++		printf("\t\t\t primary channel: %d\n", axghz_ops[0]);
++		printf("\t\t\t channel width: %d (%s)\n", axghz_ops[1] & 0x03,
++			(axghz_ops[1] & 0x03) < ARRAY_SIZE(chandwidths_6ghz) ? chandwidths_6ghz[axghz_ops[1] & 0x03] : "unknown");
++		printf("\t\t\t duplicate beacon: %d\n", (axghz_ops[1] >> 2) & 0x01);
++		printf("\t\t\t regulatory info: 0x%.2x\n", (axghz_ops[1] >> 23) & 0x07);
++		printf("\t\t\t center freq segment 1: %d\n", axghz_ops[2]);
++		printf("\t\t\t center freq segment 2: %d\n", axghz_ops[3]);
++		printf("\t\t\t minimum rate: %dMbps\n", axghz_ops[4]);
++		parsed += 5;
++	}
++}
++
+ static void print_supp_op_classes(const uint8_t type, uint8_t len,
+ 				  const uint8_t *data,
+ 				  const struct print_ies_data *ie_buffer)
+@@ -2434,6 +2491,7 @@ static void print_he_capa(const uint8_t type, uint8_t len, const uint8_t *data,
+ 
+ static const struct ie_print ext_printers[] = {
+ 	[35] = { "HE capabilities", print_he_capa, 21, 54, BIT(PRINT_SCAN), },
++	[36] = { "HE operation", print_he_oper, 6, 15, BIT(PRINT_SCAN), },
+ };
+ 
+ static void print_extension(unsigned char len, unsigned char *ie,
+diff --git a/util.c b/util.c
+index 6feed5f..3f171b9 100644
+--- a/util.c
++++ b/util.c
+@@ -1315,11 +1315,11 @@ static void __print_he_capa(const __u16 *mac_cap,
+ 	printf("):\n");
+ 
+ 	PRINT_HE_PHY_CAP0(0, 1, "HE40/2.4GHz");
+-	PRINT_HE_PHY_CAP0(0, 2, "HE40/HE80/5GHz");
+-	PRINT_HE_PHY_CAP0(0, 3, "HE160/5GHz");
+-	PRINT_HE_PHY_CAP0(0, 4, "HE160/HE80+80/5GHz");
++	PRINT_HE_PHY_CAP0(0, 2, "HE40/HE80/5GHz/6GHz");
++	PRINT_HE_PHY_CAP0(0, 3, "HE160/5GHz/6GHz");
++	PRINT_HE_PHY_CAP0(0, 4, "HE160/HE80+80/5GHz/6GHz");
+ 	PRINT_HE_PHY_CAP0(0, 5, "242 tone RUs/2.4GHz");
+-	PRINT_HE_PHY_CAP0(0, 6, "242 tone RUs/5GHz");
++	PRINT_HE_PHY_CAP0(0, 6, "242 tone RUs/5GHz/6GHz");
+ 
+ 	PRINT_HE_PHY_CAP_MASK(1, 0, 0xf, "Punctured Preamble RX");
+ 	PRINT_HE_PHY_CAP_MASK(1, 4, 0x1, "Device Class");
+-- 
+2.17.1
+

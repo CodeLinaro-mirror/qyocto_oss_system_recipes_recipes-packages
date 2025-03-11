@@ -1,19 +1,5 @@
-From 72be4bb967e8081d4864619ff2afaad77e1956e2 Mon Sep 17 00:00:00 2001
-From: Vikram Kandukuri <quic_vikram@quicinc.com>
-Date: Wed, 20 Oct 2021 23:10:53 +0530
-Subject: [PATCH] iw: Add MLO support in interface creation
-
-Add MLO support in interface creation and add support to get
-MLD mac address in dev info.
-
-Signed-off-by: Vikram Kandukuri <quic_vikram@quicinc.com>
----
- interface.c | 27 ++++++++++++++++++++++++++-
- nl80211.h   |  3 +++
- 2 files changed, 29 insertions(+), 1 deletion(-)
-
 diff --git a/interface.c b/interface.c
-index 57e2fe4..88b30e9 100644
+index e977fae..0f6a405 100644
 --- a/interface.c
 +++ b/interface.c
 @@ -236,7 +236,9 @@ static int handle_interface_add(struct nl80211_state *state,
@@ -57,7 +43,7 @@ index 57e2fe4..88b30e9 100644
  	return 0;
   nla_put_failure:
  	return -ENOBUFS;
-@@ -399,6 +417,13 @@ static int print_iface_handler(struct nl_msg *msg, void *arg)
+@@ -432,6 +450,13 @@ static int print_iface_handler(struct nl_msg *msg, void *arg)
  		mac_addr_n2a(mac_addr, nla_data(tb_msg[NL80211_ATTR_MAC]));
  		printf("%s\taddr %s\n", indent, mac_addr);
  	}
@@ -72,12 +58,12 @@ index 57e2fe4..88b30e9 100644
  		printf("%s\tssid ", indent);
  		print_ssid_escaped(nla_len(tb_msg[NL80211_ATTR_SSID]),
 diff --git a/nl80211.h b/nl80211.h
-index 174851b..5654aca 100644
+index 5912451..0f952a7 100644
 --- a/nl80211.h
 +++ b/nl80211.h
-@@ -3047,6 +3047,9 @@ enum nl80211_attrs {
+@@ -3403,6 +3403,9 @@ enum nl80211_attrs {
  
- 	NL80211_ATTR_WIPHY_ANTENNA_GAIN,
+ 	NL80211_ATTR_STA_MGMT_RTS_CTS_CONFIG,
  
 +	NL80211_ATTR_MLD_MAC=352,
 +	NL80211_ATTR_MLD_REFERENCE=353,
@@ -85,6 +71,3 @@ index 174851b..5654aca 100644
  	/* add attributes here, update the policy in nl80211.c */
  
  	__NL80211_ATTR_AFTER_LAST,
--- 
-2.7.4
-

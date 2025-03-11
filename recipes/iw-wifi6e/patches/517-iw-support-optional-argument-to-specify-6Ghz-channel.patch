@@ -1,24 +1,8 @@
-From 092d838b9660999c7e7212fe9430a5bd0eed8ef9 Mon Sep 17 00:00:00 2001
-From: Pradeep Kumar Chitrapu <pradeepc@codeaurora.org>
-Date: Thu, 3 Sep 2020 16:45:40 -0700
-Subject: [PATCH] iw: support optional argument to parse 6Ghz channel
-
-Channel numbers of 6GHz band overlaps with those of 2G or 5G bands.
-Therefore additional argument "6G" is expected next to channel
-number to map it to correct frequency. If not specified defaults to
-matching 2G or 5G frequency.
-example: iw wlanX set channel 1 6G 80MHz
-
-Signed-off-by: Pradeep Kumar Chitrapu <pradeepc@codeaurora.org>
----
- interface.c |  6 ++++--
- phy.c       |  8 ++++----
- util.c      | 14 ++++++++++----
- 3 files changed, 18 insertions(+), 10 deletions(-)
-
+diff --git a/interface.c b/interface.c
+index 735eef4..1546b0c 100644
 --- a/interface.c
 +++ b/interface.c
-@@ -745,8 +745,10 @@ COMMAND(switch, freq,
+@@ -786,8 +786,10 @@ COMMAND(switch, freq,
  	"<control freq> [5|10|20|40|80|80+80|160] [<center1_freq> [<center2_freq>]] [beacons <count>] [block-tx]",
  	NL80211_CMD_CHANNEL_SWITCH, 0, CIB_NETDEV, handle_freq,
  	"Switch the operating channel by sending a channel switch announcement (CSA).");
@@ -31,21 +15,23 @@ Signed-off-by: Pradeep Kumar Chitrapu <pradeepc@codeaurora.org>
  
  static int handle_retry_count(struct nl80211_state *state,
  			      struct nl_msg *msg,
+diff --git a/phy.c b/phy.c
+index 4722125..5f8b208 100644
 --- a/phy.c
 +++ b/phy.c
-@@ -222,9 +222,9 @@ static int handle_chan(struct nl80211_st
+@@ -247,9 +247,9 @@ static int handle_chan(struct nl80211_state *state, struct nl_msg *msg,
  
  	return put_chandef(msg, &chandef);
  }
--COMMAND(set, channel, "<channel> [NOHT|HT20|HT40+|HT40-|5MHz|10MHz|80MHz]",
-+COMMAND(set, channel, "<channel> [6G] [NOHT|HT20|HT40+|HT40-|5MHz|10MHz|80MHz]",
+-COMMAND(set, channel, "<channel> [NOHT|HT20|HT40+|HT40-|5MHz|10MHz|80MHz|160MHz]",
++COMMAND(set, channel, "<channel> [6G] [NOHT|HT20|HT40+|HT40-|5MHz|10MHz|80MHz|160MHz]",
  	NL80211_CMD_SET_WIPHY, 0, CIB_PHY, handle_chan, NULL);
--COMMAND(set, channel, "<channel> [NOHT|HT20|HT40+|HT40-|5MHz|10MHz|80MHz]",
-+COMMAND(set, channel, "<channel> [6G] [NOHT|HT20|HT40+|HT40-|5MHz|10MHz|80MHz] [6G]",
+-COMMAND(set, channel, "<channel> [NOHT|HT20|HT40+|HT40-|5MHz|10MHz|80MHz|160MHz]",
++COMMAND(set, channel, "<channel> [6G] [NOHT|HT20|HT40+|HT40-|5MHz|10MHz|80MHz|160MHz]",
  	NL80211_CMD_SET_WIPHY, 0, CIB_NETDEV, handle_chan, NULL);
  
  
-@@ -369,12 +369,12 @@ err_out:
+@@ -403,12 +403,12 @@ err_out:
  		free(cac_trigger_argv);
  	return err;
  }
@@ -60,19 +46,21 @@ Signed-off-by: Pradeep Kumar Chitrapu <pradeepc@codeaurora.org>
  	"freq <frequency> [NOHT|HT20|HT40+|HT40-|5MHz|10MHz|80MHz]\n"
  	"freq <frequency> [5|10|20|40|80|80+80|160] [<center1_freq> [<center2_freq>]]",
  	NL80211_CMD_RADAR_DETECT, 0, CIB_NETDEV, handle_cac_trigger,
+diff --git a/util.c b/util.c
+index 5af6b69..6feed5f 100644
 --- a/util.c
 +++ b/util.c
-@@ -578,7 +578,8 @@ static int parse_freqs(struct chandef *c
+@@ -595,7 +595,8 @@ static int parse_freqs(struct chandef *chandef, int argc, char **argv,
   * user by giving "NOHT" instead.
   *
   * The working specifier if chan is set are:
-- *   <channel> [NOHT|HT20|HT40+|HT40-|5MHz|10MHz|80MHz]
-+ *   <channel> [6G] [NOHT|HT20|HT40+|HT40-|5MHz|10MHz|80MHz]
+- *   <channel> [NOHT|HT20|HT40+|HT40-|5MHz|10MHz|80MHz|160MHz]
++ *   <channel> [6G] [NOHT|HT20|HT40+|HT40-|5MHz|10MHz|80MHz|160MHz]
 + * channel number defaults to 5G or 2G band unless 6G is specified.
   *
   * And if frequency is set:
-  *   <freq> [NOHT|HT20|HT40+|HT40-|5MHz|10MHz|80MHz]
-@@ -647,7 +648,12 @@ int parse_freqchan(struct chandef *chand
+  *   <freq> [NOHT|HT20|HT40+|HT40-|5MHz|10MHz|80MHz|160MHz|320MHz]
+@@ -699,7 +700,12 @@ int parse_freqchan(struct chandef *chandef, bool chan, int argc, char **argv,
  	if (chan) {
  		enum nl80211_band band;
  
@@ -86,8 +74,8 @@ Signed-off-by: Pradeep Kumar Chitrapu <pradeepc@codeaurora.org>
  		freq = ieee80211_channel_to_frequency(freq, band);
  	}
  	chandef->control_freq = freq;
-@@ -655,9 +661,9 @@ int parse_freqchan(struct chandef *chand
- 	chandef->center_freq1 = freq;
+@@ -709,9 +715,9 @@ int parse_freqchan(struct chandef *chandef, bool chan, int argc, char **argv,
+ 	chandef->center_freq1_offset = freq_offset;
  
  	/* Try to parse HT mode definitions */
 -	if (argc > 1) {
