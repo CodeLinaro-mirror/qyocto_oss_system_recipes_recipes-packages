@@ -16,6 +16,7 @@
 #
 
 . /lib/functions/boot.sh
+. /lib/upgrade/platform.sh
 
 pi_mount_skip_next=false
 pi_jffs2_mount_success=false

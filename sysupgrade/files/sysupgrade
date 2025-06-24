@@ -291,10 +291,6 @@ fi
 
 echo $ALIVE > /tmp/.alive_upgrade
 
-if [ -n "$IMAGE" ] && type 'platform_check_image' >/dev/null 2>/dev/null; then
-        platform_check_image "$IMAGE"
-fi
-
 case "$IMAGE" in
 	http://*|\
 	https://*)
@@ -317,6 +313,10 @@ case "$IMAGE" in
 		IMAGE=/tmp/sysupgrade.img
 		;;
 esac
+
+if [ -n "$IMAGE" ] && type 'platform_check_image' >/dev/null 2>/dev/null; then
+        platform_check_image "$IMAGE"
+fi
 
 if [ -n "$CONF_IMAGE" ]; then
 	case "$(get_magic_word $CONF_IMAGE cat)" in

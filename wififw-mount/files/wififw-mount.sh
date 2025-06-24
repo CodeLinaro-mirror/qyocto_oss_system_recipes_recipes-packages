@@ -39,13 +39,13 @@ get_partname() {
 	local parse_value=4
 	local mtdpart=$(grep "\"0:BOOTCONFIG\"" /proc/mtd | awk -F: '{print $1}')
 	local trymode_inprogress=$(cat /sys/devices/platform/firmware:scm/trymode_inprogress)
-
-	dd if=/dev/${mtdpart} of=/tmp/bootconfig.bin
-
-	dumpimage -b $parse_value &> /dev/null
-	if [[ "$?" == 1 ]];then
-		echo "Unable to read bootconfig"
-		return 1
+	if [ ! -z $mtdpart ]; then
+		dd if=/dev/${mtdpart} of=/tmp/bootconfig.bin
+		dumpimage -b $parse_value &> /dev/null
+		if [[ "$?" == 1 ]];then
+			echo "Unable to read bootconfig"
+			return 1
+		fi
 	fi
 
 	if [ ! -e /tmp/bootconfig_members.txt ]; then
@@ -69,7 +69,9 @@ get_partname() {
 			part_name="1"
 		fi
 	fi
-
+	if [ -z $mtdpart ] && [  $trymode_inprogress -eq 1 ]; then
+		[ "$part_name" == "1" ] && part_name="" || part_name="1"
+	fi
 	echo $part_name
 }
 
