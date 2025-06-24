@@ -22,11 +22,15 @@ check_for_firstboot() {
 			mtd erase "$mtd_dev"
 		}
 	else
-		loopdev=$(find_loop_device)
+		if grep -q "IPQ5424" /proc/device-tree/model; then
+			loopdev=$(find_loop_device_new)
+		else
+			loopdev=$(find_loop_device)
+		fi
 		mount "$loopdev" /tmp/test -t ext4 || {
-			mkfs.ext4 -F "$loopdev"
+			mkfs.ext4 -F "$loopdev" >/dev/console
 		}
-		[ -e "$loopdev" ] && losetup -d $loopdev
+		[ -e "$loopdev" ] && losetup -d $loopdev >/dev/console
 	fi
 		umount /tmp/test &>/dev/null
 }
@@ -59,7 +63,11 @@ do_mount_ext4() {
     #check_skip && return
     #grep -wqs rootfs_data /sys/block/mmcblk*/*/uevent || return 1
     
-    ldevice=$(find_loop_device)
+   if grep -q "IPQ5424" /proc/device-tree/model; then
+	   ldevice=$(find_loop_device_new)
+   else
+	   ldevice=$(find_loop_device)
+   fi
     [ -e "$ldevice" ] || return 1
 
     mkdir -p /tmp/overlay
