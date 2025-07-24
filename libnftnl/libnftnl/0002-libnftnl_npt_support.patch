@@ -1,0 +1,356 @@
+Author: Suhas N Bhargav <sbhargav@qti.qualcomm.com>
+Date:   Wed Jun 11 14:18:38 2025 +0530
+
+    libnftnl: Fix the failure observed with NFtable command for SNPT/DNPT Targets
+
+    Change-Id: I4fa2d98f6a9482db7b8fca71705f99957a2cd72d
+    Signed-off-by: Suhas N Bhargav <sbhargav@qti.qualcomm.com>
+---
+Index: libnftnl-1.2.8/include/libnftnl/expr.h
+===================================================================
+--- libnftnl-1.2.8.orig/include/libnftnl/expr.h
++++ libnftnl-1.2.8/include/libnftnl/expr.h
+@@ -168,6 +168,16 @@ enum {
+ };
+
+ enum {
++	NFTNL_EXPR_NPT_TYPE		= NFTNL_EXPR_BASE,
++	NFTNL_EXPR_NPT_FAMILY,
++	NFTNL_EXPR_NPT_REG_SRC_PFX,
++	NFTNL_EXPR_NPT_REG_DST_PFX,
++	NFTNL_EXPR_NPT_SRC_PFXLEN,
++	NFTNL_EXPR_NPT_DST_PFXLEN,
++	__NFTNL_EXPR_NPT_MAX
++};
++
++enum {
+ 	NFTNL_EXPR_TPROXY_FAMILY	= NFTNL_EXPR_BASE,
+ 	NFTNL_EXPR_TPROXY_REG_ADDR,
+ 	NFTNL_EXPR_TPROXY_REG_PORT,
+Index: libnftnl-1.2.8/include/linux/netfilter/nf_tables.h
+===================================================================
+--- libnftnl-1.2.8.orig/include/linux/netfilter/nf_tables.h
++++ libnftnl-1.2.8/include/linux/netfilter/nf_tables.h
+@@ -1401,10 +1401,14 @@ enum nft_reject_attributes {
+  *
+  * @NFT_NAT_SNAT: source NAT
+  * @NFT_NAT_DNAT: destination NAT
++ * @NFT_NAT_SNPT: source NPT
++ * @NFT_NAT_DNPT: destination NPT
+  */
+ enum nft_nat_types {
+ 	NFT_NAT_SNAT,
+ 	NFT_NAT_DNAT,
++	NFT_NAT_SNPT,
++	NFT_NAT_DNPT
+ };
+
+ /**
+@@ -1464,6 +1468,28 @@ enum nft_masq_attributes {
+ #define NFTA_MASQ_MAX		(__NFTA_MASQ_MAX - 1)
+
+ /**
++ * enum nft_npt_attributes - nf_tables NPT expression attributes
++ *
++ * @NFTA_NPT_TYPE: NPT type (NLA_U32: nft_nat_types)
++ * @NFTA_NPT_FAMILY: NPT family (NLA_U32)
++ * @NFTA_NPT_REG_SRC_PFX: register of Source Prefix (NLA_U32: nft_registers)
++ * @NFTA_NPT_REG_DST_PFX: register of Destination Prefix (NLA_U32: nft_registers)
++ * @NFTA_NPT_REG_SRC_PFX_LEN: Source prefix length value (NLA_U8)
++ * @NFTA_NPT_REG_DST_PFX_LEN: Destination prefix length value (NLA_U8)
++ */
++enum nft_npt_attributes {
++	NFTA_NPT_UNSPEC,
++	NFTA_NPT_TYPE,
++	NFTA_NPT_FAMILY,
++	NFTA_NPT_REG_SRC_PFX,
++	NFTA_NPT_REG_DST_PFX,
++	NFTA_NPT_REG_SRC_PFX_LEN,
++	NFTA_NPT_REG_DST_PFX_LEN,
++	__NFTA_NPT_MAX
++};
++#define NFTA_NPT_MAX		(__NFTA_NPT_MAX - 1)
++
++/**
+  * enum nft_redir_attributes - nf_tables redirect expression netlink attributes
+  *
+  * @NFTA_REDIR_REG_PROTO_MIN: source register of proto range start (NLA_U32: nft_registers)
+Index: libnftnl-1.2.8/src/expr/npt.c
+===================================================================
+--- /dev/null
++++ libnftnl-1.2.8/src/expr/npt.c
+@@ -0,0 +1,242 @@
++/*
++ * SPDX-License-Identifier: GPL-2.0-only
++ * Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
++ */
++
++#include "internal.h"
++
++#include <stdio.h>
++#include <stdint.h>
++#include <limits.h>
++#include <string.h>
++#include <errno.h>
++#include <arpa/inet.h>
++#include <libmnl/libmnl.h>
++#include <linux/netfilter/nf_tables.h>
++#include <libnftnl/expr.h>
++#include <libnftnl/rule.h>
++
++struct nftnl_expr_npt {
++	enum nft_registers	sreg_src_pfx;
++	enum nft_registers	sreg_dst_pfx;
++	uint8_t			src_pfx_len;
++	uint8_t			dst_pfx_len;
++	int			family;
++	enum nft_nat_types	type;
++};
++
++static int nftnl_expr_npt_set(struct nftnl_expr *e, uint16_t type, const void *data, uint32_t data_len)
++{
++	struct nftnl_expr_npt *npt = nftnl_expr_data(e);
++
++	switch(type) {
++	case NFTNL_EXPR_NPT_TYPE:
++		memcpy(&npt->type, data, data_len);
++		break;
++	case NFTNL_EXPR_NPT_FAMILY:
++		memcpy(&npt->family, data, data_len);
++		break;
++	case NFTNL_EXPR_NPT_REG_SRC_PFX:
++		memcpy(&npt->sreg_src_pfx, data, data_len);
++		break;
++	case NFTNL_EXPR_NPT_REG_DST_PFX:
++		memcpy(&npt->sreg_dst_pfx, data, data_len);
++		break;
++	case NFTNL_EXPR_NPT_SRC_PFXLEN:
++		memcpy(&npt->src_pfx_len, data, data_len);
++		break;
++	case NFTNL_EXPR_NPT_DST_PFXLEN:
++		memcpy(&npt->dst_pfx_len, data, data_len);
++		break;
++	}
++
++	return 0;
++}
++
++static const void *nftnl_expr_npt_get(const struct nftnl_expr *e, uint16_t type, uint32_t *data_len)
++{
++	struct nftnl_expr_npt *npt = nftnl_expr_data(e);
++
++	switch(type) {
++	case NFTNL_EXPR_NPT_TYPE:
++		*data_len = sizeof(npt->type);
++		return &npt->type;
++	case NFTNL_EXPR_NPT_FAMILY:
++		*data_len = sizeof(npt->family);
++		return &npt->family;
++	case NFTNL_EXPR_NPT_REG_SRC_PFX:
++		*data_len = sizeof(npt->sreg_src_pfx);
++		return &npt->sreg_src_pfx;
++	case NFTNL_EXPR_NPT_REG_DST_PFX:
++		*data_len = sizeof(npt->sreg_dst_pfx);
++		return &npt->sreg_dst_pfx;
++	case NFTNL_EXPR_NPT_SRC_PFXLEN:
++		*data_len = sizeof(npt->src_pfx_len);
++		return &npt->src_pfx_len;
++	case NFTNL_EXPR_NPT_DST_PFXLEN:
++		*data_len = sizeof(npt->dst_pfx_len);
++		return &npt->dst_pfx_len;
++	}
++	return NULL;
++}
++
++static int nftnl_expr_npt_cb(const struct nlattr *attr, void *data)
++{
++	const struct nlattr **tb = data;
++	int type = mnl_attr_get_type(attr);
++
++	if (mnl_attr_type_valid(attr, NFTA_NPT_MAX) < 0)
++		return MNL_CB_OK;
++
++	switch(type) {
++	case NFTA_NPT_TYPE:
++	case NFTA_NPT_FAMILY:
++	case NFTA_NPT_REG_SRC_PFX:
++	case NFTA_NPT_REG_DST_PFX:
++		if (mnl_attr_validate(attr, MNL_TYPE_U32) < 0)
++			abi_breakage();
++		break;
++
++	case NFTA_NPT_REG_SRC_PFX_LEN:
++	case NFTA_NPT_REG_DST_PFX_LEN:
++		if (mnl_attr_validate(attr, MNL_TYPE_U8) < 0)
++			abi_breakage();
++		break;
++	}
++
++	tb[type] = attr;
++	return MNL_CB_OK;
++}
++
++static int nftnl_expr_npt_parse(struct nftnl_expr *e, struct nlattr *attr)
++{
++	struct nftnl_expr_npt *npt = nftnl_expr_data(e);
++	struct nlattr *tb[NFTA_NPT_MAX+1] = {};
++
++	if (mnl_attr_parse_nested(attr, nftnl_expr_npt_cb, tb) < 0)
++		return -1;
++
++	if (tb[NFTA_NPT_TYPE]) {
++		npt->type = ntohl(mnl_attr_get_u32(tb[NFTA_NPT_TYPE]));
++		e->flags |= (1 << NFTNL_EXPR_NPT_TYPE);
++	}
++	if (tb[NFTA_NPT_FAMILY]) {
++		npt->family = ntohl(mnl_attr_get_u32(tb[NFTA_NPT_FAMILY]));
++		e->flags |= (1 << NFTNL_EXPR_NPT_FAMILY);
++	}
++	if (tb[NFTA_NPT_REG_SRC_PFX]) {
++		npt->sreg_src_pfx = ntohl(mnl_attr_get_u32(tb[NFTA_NPT_REG_SRC_PFX]));
++		e->flags |= (1 << NFTNL_EXPR_NPT_REG_SRC_PFX);
++	}
++	if (tb[NFTA_NPT_REG_DST_PFX]) {
++		npt->sreg_dst_pfx = ntohl(mnl_attr_get_u32(tb[NFTA_NPT_REG_DST_PFX]));
++		e->flags |= (1 << NFTNL_EXPR_NPT_REG_DST_PFX);
++	}
++	if (tb[NFTA_NPT_REG_SRC_PFX_LEN]) {
++		npt->src_pfx_len = mnl_attr_get_u8(tb[NFTA_NPT_REG_SRC_PFX_LEN]);
++		e->flags |= (1 << NFTNL_EXPR_NPT_SRC_PFXLEN);
++	}
++	if (tb[NFTA_NPT_REG_DST_PFX_LEN]) {
++		npt->dst_pfx_len = mnl_attr_get_u8(tb[NFTA_NPT_REG_DST_PFX_LEN]);
++		e->flags |= (1 << NFTNL_EXPR_NPT_DST_PFXLEN);
++	}
++
++	return 0;
++}
++
++static void nftnl_expr_npt_build(struct nlmsghdr *nlh, const struct nftnl_expr *e)
++{
++	struct nftnl_expr_npt *npt = nftnl_expr_data(e);
++
++	if (e->flags & (1 << NFTNL_EXPR_NPT_TYPE))
++		mnl_attr_put_u32(nlh, NFTA_NPT_TYPE, htonl(npt->type));
++	if (e->flags & (1 << NFTNL_EXPR_NPT_FAMILY))
++		mnl_attr_put_u32(nlh, NFTA_NPT_FAMILY, htonl(npt->family));
++	if (e->flags & (1 << NFTNL_EXPR_NPT_REG_SRC_PFX))
++		mnl_attr_put_u32(nlh, NFTA_NPT_REG_SRC_PFX, htonl(npt->sreg_src_pfx));
++	if (e->flags & (1 << NFTNL_EXPR_NPT_REG_DST_PFX))
++		mnl_attr_put_u32(nlh, NFTA_NPT_REG_DST_PFX, htonl(npt->sreg_dst_pfx));
++	if (e->flags & (1 << NFTNL_EXPR_NPT_SRC_PFXLEN))
++		mnl_attr_put_u8(nlh, NFTA_NPT_REG_SRC_PFX_LEN, npt->src_pfx_len);
++	if (e->flags & (1 << NFTNL_EXPR_NPT_DST_PFXLEN))
++		mnl_attr_put_u8(nlh, NFTA_NPT_REG_DST_PFX_LEN, npt->dst_pfx_len);
++}
++
++static inline const char *npt2str(uint16_t npt)
++{
++	switch (npt) {
++	case NFT_NAT_SNPT:
++		return "snpt";
++	case NFT_NAT_DNPT:
++		return "dnpt";
++	default:
++		return "unknown";
++	}
++}
++
++static inline int nftnl_str2npt(const char *npt)
++{
++	if (strcmp(npt, "snpt") == 0)
++		return NFT_NAT_SNPT;
++	else if (strcmp(npt, "dnpt") == 0)
++		return NFT_NAT_DNPT;
++	else {
++		errno = EINVAL;
++		return -1;
++	}
++}
++
++static int nftnl_expr_npt_snprintf(char *buf, size_t remain, uint32_t flags, const struct nftnl_expr *e)
++{
++	struct nftnl_expr_npt *npt = nftnl_expr_data(e);
++	int offset = 0, ret = 0;
++
++	ret = snprintf(buf, remain, "%s ", npt2str(npt->type));
++	SNPRINTF_BUFFER_SIZE(ret, remain, offset);
++
++	ret = snprintf(buf + offset, remain, "%s ", nftnl_family2str(npt->family));
++	SNPRINTF_BUFFER_SIZE(ret, remain, offset);
++
++	if (e->flags & (1 << NFTNL_EXPR_NPT_REG_SRC_PFX)) {
++		ret = snprintf(buf + offset, remain, "src_pfx reg %u ", npt->sreg_src_pfx);
++		SNPRINTF_BUFFER_SIZE(ret, remain, offset);
++	}
++
++	if (e->flags & (1 << NFTNL_EXPR_NPT_REG_DST_PFX)) {
++		ret = snprintf(buf + offset, remain, "dst_pfx reg %u ", npt->sreg_dst_pfx);
++		SNPRINTF_BUFFER_SIZE(ret, remain, offset);
++	}
++
++	if (e->flags & (1 << NFTNL_EXPR_NPT_SRC_PFXLEN)) {
++		ret = snprintf(buf + offset, remain, "src_pfx_len %u ", npt->src_pfx_len);
++		SNPRINTF_BUFFER_SIZE(ret, remain, offset);
++	}
++
++	if (e->flags & (1 << NFTNL_EXPR_NPT_DST_PFXLEN)) {
++		ret = snprintf(buf + offset, remain, "dst_pfx_len %u ", npt->dst_pfx_len);
++		SNPRINTF_BUFFER_SIZE(ret, remain, offset);
++	}
++
++	return offset;
++}
++
++static struct attr_policy npt_attr_policy[__NFTNL_EXPR_NPT_MAX] = {
++	[NFTNL_EXPR_NPT_TYPE]          = { .maxlen = sizeof(uint32_t) },
++	[NFTNL_EXPR_NPT_FAMILY]        = { .maxlen = sizeof(uint32_t) },
++	[NFTNL_EXPR_NPT_REG_SRC_PFX]   = { .maxlen = sizeof(uint32_t) },
++	[NFTNL_EXPR_NPT_REG_DST_PFX]   = { .maxlen = sizeof(uint32_t) },
++	[NFTNL_EXPR_NPT_SRC_PFXLEN]    = { .maxlen = sizeof(uint8_t) },
++	[NFTNL_EXPR_NPT_DST_PFXLEN]    = { .maxlen = sizeof(uint8_t) },
++};
++
++struct expr_ops expr_ops_npt = {
++	.name		= "npt",
++	.alloc_len	= sizeof(struct nftnl_expr_npt),
++	.nftnl_max_attr	= __NFTNL_EXPR_NPT_MAX - 1,
++	.attr_policy	= npt_attr_policy,
++	.set		= nftnl_expr_npt_set,
++	.get		= nftnl_expr_npt_get,
++	.parse		= nftnl_expr_npt_parse,
++	.build		= nftnl_expr_npt_build,
++	.output		= nftnl_expr_npt_snprintf,
++};
+Index: libnftnl-1.2.8/src/Makefile.am
+===================================================================
+--- libnftnl-1.2.8.orig/src/Makefile.am
++++ libnftnl-1.2.8/src/Makefile.am
+@@ -45,6 +45,7 @@ libnftnl_la_SOURCES = utils.c		\
+ 		      expr/meta.c	\
+ 		      expr/numgen.c	\
+ 		      expr/nat.c	\
++		      expr/npt.c	\
+ 		      expr/tproxy.c	\
+ 		      expr/objref.c	\
+ 		      expr/payload.c	\
+Index: libnftnl-1.2.8/src/expr_ops.c
+===================================================================
+--- libnftnl-1.2.8.orig/src/expr_ops.c
++++ libnftnl-1.2.8/src/expr_ops.c
+@@ -24,6 +24,7 @@ extern struct expr_ops expr_ops_match;
+ extern struct expr_ops expr_ops_meta;
+ extern struct expr_ops expr_ops_ng;
+ extern struct expr_ops expr_ops_nat;
++extern struct expr_ops expr_ops_npt;
+ extern struct expr_ops expr_ops_tproxy;
+ extern struct expr_ops expr_ops_objref;
+ extern struct expr_ops expr_ops_payload;
+@@ -69,6 +70,7 @@ static struct expr_ops *expr_ops[] = {
+ 	&expr_ops_meta,
+ 	&expr_ops_ng,
+ 	&expr_ops_nat,
++	&expr_ops_npt,
+ 	&expr_ops_tproxy,
+ 	&expr_ops_notrack,
+ 	&expr_ops_payload,

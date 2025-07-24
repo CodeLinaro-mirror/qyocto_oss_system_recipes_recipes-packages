@@ -5,6 +5,7 @@ SECTION = "libs"
 
 SRC_URI = "git://git.netfilter.org/libnftnl;branch=master \
            file://0001-configure.ac-Add-serial-tests.patch \
+           file://0002-libnftnl_npt_support.patch \
            file://run-ptest \
            "
 SRCREV = "06e2cbec41c7cd7f2b1e660ce5e5f949912e32eb"
