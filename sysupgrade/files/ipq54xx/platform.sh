@@ -285,7 +285,7 @@ flash_section() {
 			bootconfig*) echo " Section $image_name is ignored "; continue ;;
 			gpt*) echo " Section $image_name is ignored "; continue ;;
 			gptbackup*) echo " Section $image_name is ignored "; continue ;;
-			wifi_fw*) do_flash_failsafe_partition ${image_name} $partition; do_flash_failsafe_ubi_volume ${image_name} "rootfs" $partition ;;
+			wifi_fw*) do_flash_failsafe_partition ${image_name} "0:WIFIFW"; do_flash_failsafe_ubi_volume ${image_name} "rootfs" $partition ;;
 			ubi*) do_flash_ubi ${image_name} $partition;;
 			*) do_flash_failsafe_partition ${image_name} $partition;;
 		esac
@@ -478,7 +478,7 @@ trymode_boot_update() {
 	#passing value '0' to parse the bootconfig and
 	# setting the bank back as valid is being handled in drive
 	extract_bootconfig "0:BOOTCONFIG"
-	dumpimage -b 0
+	dumpimage -b 0 > /dev/null
 	if [[ "$?" == 1 ]];then
 		echo "bootconfig functionality failed, rebooting.."
 		return 1
@@ -577,9 +577,7 @@ platform_copy_config() {
 		done
 		mount -t ubifs $m_vol:rootfs_data /tmp/overlay
 	elif [ -e "$emmcblock" ]; then
-		losetup --detach-all
 		local loopdev="$(losetup -f)"
-		[ "$upgradepart" == "rootfs" ] && upgradepart="rootfs_1" || upgradepart="rootfs"
 		emmcblock="$(find_mmc_part ${upgradepart})"
 		data_blockoffset="$(get_squashfs_size ${emmcblock})"
 		losetup -o $data_blockoffset $loopdev $emmcblock || {

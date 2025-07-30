@@ -15,7 +15,6 @@
 #  OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-
 mount() {
 	MOUNT_CMD=$(/bin/busybox mount &>/dev/null && echo "/bin/busybox mount" || echo "/bin/busybox.suid mount")
 	$MOUNT_CMD -o noatime "$@"
@@ -64,6 +63,27 @@ find_loop_device() {
        echo "$loopdev"
 }
 
+find_loop_device_new() {
+	local upgradepart="rootfs"
+	local mmcblk=$(grep "BOOTCONFIG" /sys/block/* -rns | awk -F/ '{print $5}')
+	if [ ! -e /tmp/bootconfig_members.txt ]; then
+		trymode_boot_update
+	fi
+	if [ ! -e /tmp/bootconfig_members.txt ]; then
+		echo " Parsed bootconfig info not available " >/dev/console
+		return 1
+	fi
+	upgradepart=$(get_upgrade_bank $upgradepart)
+	[ "$upgradepart" == "rootfs" ] && upgradepart="rootfs_1" || upgradepart="rootfs"
+	emmcblock="$(find_mmc_part ${upgradepart})"
+	data_blockoffset="$(get_squashfs_size ${emmcblock})"
+	local loopdev="$(losetup -f)"
+	losetup -o $data_blockoffset $loopdev $emmcblock || {
+		echo "Failed to mount looped rootfs_data."
+		return 1
+	}
+	echo "$loopdev"
+}
 
 jffs2_ready () {
 	mtdpart="$(find_mtd_part rootfs_data)"
