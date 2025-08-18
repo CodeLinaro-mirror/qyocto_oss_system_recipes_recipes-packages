@@ -316,6 +316,10 @@ esac
 
 if [ -n "$IMAGE" ] && type 'platform_check_image' >/dev/null 2>/dev/null; then
         platform_check_image "$IMAGE"
+	if [[ "$?" != 0 ]];then
+                echo "Image check failed." >&2
+                exit 1
+        fi
 fi
 
 if [ -n "$CONF_IMAGE" ]; then

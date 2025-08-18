@@ -43,7 +43,8 @@ find_mmc_part() {
 }
 
 get_squashfs_size() {
-       dd if="$1" skip=8 bs=5 count=1 2> /dev/null | hexdump -v -n 4 -e '1/4 "%08d"'
+	raw_size=$(dd if="$1" skip=8 bs=5 count=1 2>/dev/null | hexdump -v -n 4 -e '1/4 "%08d"')
+	expr "$raw_size" + 65536
 }
 
 find_loop_device() {
