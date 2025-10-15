@@ -1,0 +1,512 @@
+Author: Suhas N Bhargav <sbhargav@qti.qualcomm.com>
+Date:   Fri Jul 5 17:21:37 2024 +0530
+
+    openwrt-patches: nftables Userspace utility to enable Network Prefix Translation(NPTv6)
+
+    The openwrt patch helps us to enable the nft targets to perform
+    SNPT and DNPT operations which is RFC-6296 compliant
+
+    Change-Id: I95fa95895f2252f25cd6e47a174fb77edecd2145
+    Signed-off-by: Suhas N Bhargav <sbhargav@qti.qualcomm.com>
+---
+Index: nftables-1.1.1/include/linux/netfilter/nf_tables.h
+===================================================================
+--- nftables-1.1.1.orig/include/linux/netfilter/nf_tables.h
++++ nftables-1.1.1/include/linux/netfilter/nf_tables.h
+@@ -1422,10 +1422,14 @@ enum nft_reject_attributes {
+  *
+  * @NFT_NAT_SNAT: source NAT
+  * @NFT_NAT_DNAT: destination NAT
++ * @NFT_NAT_SNPT: source NPT
++ * @NFT_NAT_DNPT: destination NPT
+  */
+ enum nft_nat_types {
+ 	NFT_NAT_SNAT,
+ 	NFT_NAT_DNAT,
++	NFT_NAT_SNPT,
++	NFT_NAT_DNPT
+ };
+
+ /**
+@@ -1485,6 +1489,28 @@ enum nft_masq_attributes {
+ #define NFTA_MASQ_MAX		(__NFTA_MASQ_MAX - 1)
+
+ /**
++ * enum nft_npt_attributes - nf_tables NPT expression attributes
++ *
++ * @NFTA_NPT_TYPE: NPT type (NLA_U32: nft_nat_types)
++ * @NFTA_NPT_FAMILY: NPT family (NLA_U32)
++ * @NFTA_NPT_REG_SRC_PFX: register of Source Prefix (NLA_U32: nft_registers)
++ * @NFTA_NPT_REG_DST_PFX: register of Destination Prefix (NLA_U32: nft_registers)
++ * @NFTA_NPT_REG_SRC_PFX_LEN: Source prefix length value (NLA_U8)
++ * @NFTA_NPT_REG_DST_PFX_LEN: Destination prefix length value (NLA_U8)
++ */
++enum nft_npt_attributes {
++	NFTA_NPT_UNSPEC,
++	NFTA_NPT_TYPE,
++	NFTA_NPT_FAMILY,
++	NFTA_NPT_REG_SRC_PFX,
++	NFTA_NPT_REG_DST_PFX,
++	NFTA_NPT_REG_SRC_PFX_LEN,
++	NFTA_NPT_REG_DST_PFX_LEN,
++	__NFTA_NPT_MAX
++};
++#define NFTA_NPT_MAX		(__NFTA_NPT_MAX - 1)
++
++/**
+  * enum nft_redir_attributes - nf_tables redirect expression netlink attributes
+  *
+  * @NFTA_REDIR_REG_PROTO_MIN: source register of proto range start (NLA_U32: nft_registers)
+Index: nftables-1.1.1/include/statement.h
+===================================================================
+--- nftables-1.1.1.orig/include/statement.h
++++ nftables-1.1.1/include/statement.h
+@@ -128,6 +128,8 @@ extern struct stmt *reject_stmt_alloc(co
+ enum nft_nat_etypes {
+ 	__NFT_NAT_SNAT = NFT_NAT_SNAT,
+ 	__NFT_NAT_DNAT = NFT_NAT_DNAT,
++	__NFT_NAT_SNPT = NFT_NAT_SNPT,
++	__NFT_NAT_DNPT = NFT_NAT_DNPT,
+ 	NFT_NAT_MASQ,
+ 	NFT_NAT_REDIR,
+ };
+@@ -143,9 +145,13 @@ enum {
+ struct nat_stmt {
+ 	enum nft_nat_etypes	type;
+ 	struct expr		*addr;
++	struct expr		*src_pfx;
++	struct expr		*dst_pfx;
+ 	struct expr		*proto;
+ 	uint32_t		flags;
+ 	uint8_t			family;
++	uint8_t			src_pfx_len;
++	uint8_t			dst_pfx_len;
+ 	uint32_t		type_flags;
+ };
+
+Index: nftables-1.1.1/src/evaluate.c
+===================================================================
+--- nftables-1.1.1.orig/src/evaluate.c
++++ nftables-1.1.1/src/evaluate.c
+@@ -83,6 +83,10 @@ static const char *stmt_name(const struc
+ 			return "snat";
+ 		case NFT_NAT_DNAT:
+ 			return "dnat";
++		case NFT_NAT_SNPT:
++			return "snpt";
++		case NFT_NAT_DNPT:
++			return "dnpt";
+ 		case NFT_NAT_REDIR:
+ 			return "redirect";
+ 		case NFT_NAT_MASQ:
+@@ -4186,6 +4190,18 @@ static int stmt_evaluate_nat(struct eval
+ 		if (err < 0)
+ 			return err;
+ 	}
++
++	if (stmt->nat.src_pfx != NULL) {
++		err = stmt_evaluate_addr(ctx, stmt, &stmt->nat.family, &stmt->nat.src_pfx);
++		if (err < 0)
++			return err;
++	}
++
++	if (stmt->nat.dst_pfx != NULL) {
++		err = stmt_evaluate_addr(ctx, stmt, &stmt->nat.family, &stmt->nat.dst_pfx);
++		if (err < 0)
++			return err;
++	}
+
+ 	if (stmt->nat.proto != NULL) {
+ 		err = nat_evaluate_transport(ctx, stmt, &stmt->nat.proto);
+Index: nftables-1.1.1/src/parser_json.c
+===================================================================
+--- nftables-1.1.1.orig/src/parser_json.c
++++ nftables-1.1.1/src/parser_json.c
+@@ -252,6 +252,8 @@ static bool is_keyword(const char *keywo
+ 		"arp",
+ 		"dnat",
+ 		"snat",
++		"dnpt",
++		"snpt",
+ 		"ecn",
+ 		"reset",
+ 		"original",
+@@ -2226,6 +2228,8 @@ static int nat_type_parse(const char *ty
+ 	const char * const nat_etypes[] = {
+ 		[NFT_NAT_SNAT]	= "snat",
+ 		[NFT_NAT_DNAT]	= "dnat",
++		[NFT_NAT_SNPT]  = "snpt",
++		[NFT_NAT_DNPT]  = "dnpt",
+ 		[NFT_NAT_MASQ]	= "masquerade",
+ 		[NFT_NAT_REDIR]	= "redirect",
+ 	};
+@@ -2241,7 +2245,7 @@ static int nat_type_parse(const char *ty
+ static struct stmt *json_parse_nat_stmt(struct json_ctx *ctx,
+ 					const char *key, json_t *value)
+ {
+-	int type, familyval;
++	int type, familyval, val;
+ 	struct stmt *stmt;
+ 	json_t *tmp;
+
+@@ -2266,6 +2270,22 @@ static struct stmt *json_parse_nat_stmt(
+ 			return NULL;
+ 		}
+ 	}
++	if (!json_unpack(value, "{s:o}", "srx_pfx", &tmp)) {
++		stmt->nat.src_pfx = json_parse_stmt_expr(ctx, tmp);
++		if (!stmt->nat.src_pfx) {
++			json_error(ctx, "Invalid npt src pfx");
++			stmt_free(stmt);
++			return NULL;
++		}
++	}
++	if (!json_unpack(value, "{s:o}", "dst_pfx", &tmp)) {
++		stmt->nat.dst_pfx = json_parse_stmt_expr(ctx, tmp);
++		if (!stmt->nat.dst_pfx) {
++			json_error(ctx, "Invalid npt dst pfx");
++			stmt_free(stmt);
++			return NULL;
++		}
++	}
+ 	if (!json_unpack(value, "{s:o}", "port", &tmp)) {
+ 		stmt->nat.proto = json_parse_stmt_expr(ctx, tmp);
+ 		if (!stmt->nat.proto) {
+@@ -2292,6 +2312,22 @@ static struct stmt *json_parse_nat_stmt(
+ 		}
+ 		stmt->nat.type_flags = flags;
+ 	}
++	if (!json_unpack(value, "{s:i}", "src_pfx_len", &val)) {
++		if (val < 0) {
++			json_error(ctx, "Invalid npt src_pfx_len '%d'", val);
++			stmt_free(stmt);
++			return NULL;
++		}
++		stmt->nat.src_pfx_len = val;
++	}
++	if (!json_unpack(value, "{s:i}", "dst_pfx_len", &val)) {
++		if (val < 0) {
++			json_error(ctx, "Invalid npt dst_pfx_len '%d'", val);
++			stmt_free(stmt);
++			return NULL;
++		}
++		stmt->nat.dst_pfx_len = val;
++	}
+
+ 	return stmt;
+ }
+@@ -2927,6 +2963,8 @@ static struct stmt *json_parse_stmt(stru
+ 		{ "dup", json_parse_dup_stmt },
+ 		{ "snat", json_parse_nat_stmt },
+ 		{ "dnat", json_parse_nat_stmt },
++		{ "snpt", json_parse_nat_stmt },
++		{ "dnpt", json_parse_nat_stmt },
+ 		{ "masquerade", json_parse_nat_stmt },
+ 		{ "redirect", json_parse_nat_stmt },
+ 		{ "reject", json_parse_reject_stmt },
+Index: nftables-1.1.1/src/statement.c
+===================================================================
+--- nftables-1.1.1.orig/src/statement.c
++++ nftables-1.1.1/src/statement.c
+@@ -673,6 +673,8 @@ const char *nat_etype2str(enum nft_nat_e
+ 	static const char * const nat_types[] = {
+ 		[NFT_NAT_SNAT]	= "snat",
+ 		[NFT_NAT_DNAT]	= "dnat",
++		[NFT_NAT_SNPT]  = "snpt",
++		[NFT_NAT_DNPT]  = "dnpt",
+ 		[NFT_NAT_MASQ]	= "masquerade",
+ 		[NFT_NAT_REDIR]	= "redirect",
+ 	};
+@@ -683,7 +685,7 @@ const char *nat_etype2str(enum nft_nat_e
+ static void nat_stmt_print(const struct stmt *stmt, struct output_ctx *octx)
+ {
+ 	nft_print(octx, "%s", nat_etype2str(stmt->nat.type));
+-	if (stmt->nat.addr || stmt->nat.proto) {
++	if (stmt->nat.addr || stmt->nat.proto || stmt->nat.src_pfx || stmt->nat.dst_pfx) {
+ 		switch (stmt->nat.family) {
+ 		case NFPROTO_IPV4:
+ 			nft_print(octx, " ip");
+@@ -729,12 +731,32 @@ static void nat_stmt_print(const struct
+ 		expr_print(stmt->nat.proto, octx);
+ 	}
+
++	if (stmt->nat.src_pfx) {
++		nft_print(octx, " ");
++		expr_print(stmt->nat.src_pfx, octx);
++	}
++
++	if (stmt->nat.dst_pfx) {
++		nft_print(octx, " ");
++		expr_print(stmt->nat.dst_pfx, octx);
++	}
++
++	if (stmt->nat.src_pfx_len) {
++		nft_print(octx, "\tsrc_pfx_len: %d", stmt->nat.src_pfx_len);
++	}
++
++	if (stmt->nat.dst_pfx_len) {
++		nft_print(octx, "\tdst_pfx_len: %d", stmt->nat.dst_pfx_len);
++	}
++
+ 	print_nf_nat_flags(stmt->nat.flags, octx);
+ }
+
+ static void nat_stmt_destroy(struct stmt *stmt)
+ {
+ 	expr_free(stmt->nat.addr);
++	expr_free(stmt->nat.src_pfx);
++	expr_free(stmt->nat.dst_pfx);
+ 	expr_free(stmt->nat.proto);
+ }
+
+Index: nftables-1.1.1/src/netlink_linearize.c
+===================================================================
+--- nftables-1.1.1.orig/src/netlink_linearize.c
++++ nftables-1.1.1/src/netlink_linearize.c
+@@ -1199,7 +1199,7 @@ static void netlink_gen_nat_stmt(struct
+ 				 const struct stmt *stmt)
+ {
+ 	struct nftnl_expr *nle;
+-	enum nft_registers amin_reg, amax_reg;
++	enum nft_registers amin_reg, amax_reg, src_pfx_reg, dst_pfx_reg;
+ 	enum nft_registers pmin_reg, pmax_reg;
+ 	uint8_t family = 0;
+ 	int registers = 0;
+@@ -1219,6 +1219,13 @@ static void netlink_gen_nat_stmt(struct
+ 		nftnl_reg_pmin = NFTNL_EXPR_NAT_REG_PROTO_MIN;
+ 		nftnl_reg_pmax = NFTNL_EXPR_NAT_REG_PROTO_MAX;
+ 		break;
++	case NFT_NAT_SNPT:
++	case NFT_NAT_DNPT:
++		nle = alloc_nft_expr("npt");
++		nftnl_expr_set_u32(nle, NFTNL_EXPR_NPT_TYPE, stmt->nat.type);
++		family = stmt->nat.family;
++		nftnl_expr_set_u32(nle, NFTNL_EXPR_NPT_FAMILY, family);
++		break;
+ 	case NFT_NAT_MASQ:
+ 		nle = alloc_nft_expr("masq");
+
+@@ -1319,6 +1326,28 @@ static void netlink_gen_nat_stmt(struct
+ 		}
+ 	}
+
++	if (stmt->nat.src_pfx) {
++		src_pfx_reg = get_register(ctx, NULL);
++		registers++;
++		netlink_gen_expr(ctx, stmt->nat.src_pfx, src_pfx_reg);
++		netlink_put_register(nle, NFTNL_EXPR_NPT_REG_SRC_PFX, src_pfx_reg);
++	}
++
++	if (stmt->nat.dst_pfx) {
++		dst_pfx_reg = get_register(ctx, NULL);
++		registers++;
++		netlink_gen_expr(ctx, stmt->nat.dst_pfx, dst_pfx_reg);
++		netlink_put_register(nle, NFTNL_EXPR_NPT_REG_DST_PFX, dst_pfx_reg);
++	}
++
++	if (stmt->nat.src_pfx_len) {
++		nftnl_expr_set_u8(nle, NFTNL_EXPR_NPT_SRC_PFXLEN, stmt->nat.src_pfx_len);
++	}
++
++	if (stmt->nat.dst_pfx_len) {
++		nftnl_expr_set_u8(nle, NFTNL_EXPR_NPT_DST_PFXLEN, stmt->nat.dst_pfx_len);
++	}
++
+ 	while (registers > 0) {
+ 		release_register(ctx, NULL);
+ 		registers--;
+Index: nftables-1.1.1/src/netlink_delinearize.c
+===================================================================
+--- nftables-1.1.1.orig/src/netlink_delinearize.c
++++ nftables-1.1.1/src/netlink_delinearize.c
+@@ -1356,6 +1356,57 @@ out_err:
+ 	stmt_free(stmt);
+ }
+
++static void netlink_parse_npt(struct netlink_parse_ctx *ctx, const struct location *loc,
++				const struct nftnl_expr *nle)
++{
++	struct stmt *stmt;
++	struct expr *addr;
++	enum nft_registers reg1, reg2;
++	int family;
++
++	stmt = nat_stmt_alloc(loc, nftnl_expr_get_u32(nle, NFTNL_EXPR_NPT_TYPE));
++
++	family = nftnl_expr_get_u32(nle, NFTNL_EXPR_NPT_FAMILY);
++
++	if (ctx->table->handle.family != NFPROTO_IPV6)
++		goto out_err;
++
++	stmt->nat.family = family;
++
++	addr = NULL;
++	reg1 = netlink_parse_register(nle, NFTNL_EXPR_NPT_REG_SRC_PFX);
++	if (reg1) {
++		addr = netlink_get_register(ctx, loc, reg1);
++		if (addr == NULL) {
++			netlink_error(ctx, loc, "NPT statement has no address expression");
++			goto out_err;
++		}
++
++		expr_set_type(addr, &ip6addr_type, BYTEORDER_BIG_ENDIAN);
++		stmt->nat.src_pfx = addr;
++	}
++
++	reg2 = netlink_parse_register(nle, NFTNL_EXPR_NPT_REG_DST_PFX);
++	if (reg2) {
++		addr = netlink_get_register(ctx, loc, reg2);
++		if (addr == NULL) {
++			netlink_error(ctx, loc, "NPT statement has no address expression");
++			goto out_err;
++		}
++
++		expr_set_type(addr, &ip6addr_type, BYTEORDER_BIG_ENDIAN);
++		stmt->nat.dst_pfx = addr;
++	}
++
++	stmt->nat.src_pfx_len = nftnl_expr_get_u8(nle, NFTNL_EXPR_NPT_SRC_PFXLEN);
++	stmt->nat.dst_pfx_len = nftnl_expr_get_u8(nle, NFTNL_EXPR_NPT_DST_PFXLEN);
++
++	ctx->stmt = stmt;
++	return;
++out_err:
++	stmt_free(stmt);
++}
++
+ static void netlink_parse_synproxy(struct netlink_parse_ctx *ctx,
+ 				   const struct location *loc,
+ 				   const struct nftnl_expr *nle)
+@@ -1894,6 +1945,7 @@ static const struct expr_handler netlink
+ 	{ .name = "range",	.parse = netlink_parse_range },
+ 	{ .name = "reject",	.parse = netlink_parse_reject },
+ 	{ .name = "nat",	.parse = netlink_parse_nat },
++	{ .name = "npt",	.parse = netlink_parse_npt },
+ 	{ .name = "tproxy",	.parse = netlink_parse_tproxy },
+ 	{ .name = "notrack",	.parse = netlink_parse_notrack },
+ 	{ .name = "masq",	.parse = netlink_parse_masq },
+Index: nftables-1.1.1/src/optimize.c
+===================================================================
+--- nftables-1.1.1.orig/src/optimize.c
++++ nftables-1.1.1/src/optimize.c
+@@ -259,6 +259,9 @@ static bool __stmt_type_eq(const struct
+ 			     stmt_b->nat.proto->etype != EXPR_RANGE))
+ 				return false;
+ 			break;
++		case NFT_NAT_SNPT:
++		case NFT_NAT_DNPT:
++			break;
+ 		case NFT_NAT_MASQ:
+ 			break;
+ 		case NFT_NAT_REDIR:
+Index: nftables-1.1.1/src/json.c
+===================================================================
+--- nftables-1.1.1.orig/src/json.c
++++ nftables-1.1.1/src/json.c
+@@ -1453,6 +1453,22 @@ json_t *nat_stmt_json(const struct stmt
+ 		json_object_set_new(root, "port",
+ 				    expr_print_json(stmt->nat.proto, octx));
+
++	if (stmt->nat.src_pfx)
++		json_object_set_new(root, "src_pfx",
++				    expr_print_json(stmt->nat.src_pfx, octx));
++
++	if (stmt->nat.dst_pfx)
++		json_object_set_new(root, "dst_pfx",
++				    expr_print_json(stmt->nat.dst_pfx, octx));
++
++	if (stmt->nat.src_pfx_len)
++		json_object_set_new(root, "src_pfx_len",
++				    json_integer(stmt->nat.src_pfx_len));
++
++	if (stmt->nat.dst_pfx_len)
++		json_object_set_new(root, "dst_pfx_len",
++				    json_integer(stmt->nat.dst_pfx_len));
++
+ 	nat_stmt_add_array(root, "flags", array);
+
+ 	if (stmt->nat.type_flags) {
+Index: nftables-1.1.1/src/scanner.l
+===================================================================
+--- nftables-1.1.1.orig/src/scanner.l
++++ nftables-1.1.1/src/scanner.l
+@@ -461,6 +461,8 @@ addrstring	({macaddr}|{ip4addr}|{ip6addr
+
+ "snat"			{ scanner_push_start_cond(yyscanner, SCANSTATE_STMT_NAT); return SNAT; }
+ "dnat"			{ scanner_push_start_cond(yyscanner, SCANSTATE_STMT_NAT); return DNAT; }
++"snpt"			{ scanner_push_start_cond(yyscanner, SCANSTATE_STMT_NAT); return SNPT; }
++"dnpt"			{ scanner_push_start_cond(yyscanner, SCANSTATE_STMT_NAT); return DNPT; }
+ "masquerade"		{ scanner_push_start_cond(yyscanner, SCANSTATE_STMT_NAT); return MASQUERADE; }
+ "redirect"		{ scanner_push_start_cond(yyscanner, SCANSTATE_STMT_NAT); return REDIRECT; }
+ "random"		{ return RANDOM; }
+Index: nftables-1.1.1/src/parser_bison.y
+===================================================================
+--- nftables-1.1.1.orig/src/parser_bison.y
++++ nftables-1.1.1/src/parser_bison.y
+@@ -642,6 +642,8 @@ int nft_lex(void *, void *, void *);
+
+ %token SNAT			"snat"
+ %token DNAT			"dnat"
++%token SNPT			"snpt"
++%token DNPT			"dnpt"
+ %token MASQUERADE		"masquerade"
+ %token REDIRECT			"redirect"
+ %token RANDOM			"random"
+@@ -784,8 +786,8 @@ int nft_lex(void *, void *, void *);
+ %type <val>			limit_burst_pkts limit_burst_bytes limit_mode limit_bytes time_unit quota_mode
+ %type <stmt>			reject_stmt reject_stmt_alloc
+ %destructor { stmt_free($$); }	reject_stmt reject_stmt_alloc
+-%type <stmt>			nat_stmt nat_stmt_alloc masq_stmt masq_stmt_alloc redir_stmt redir_stmt_alloc
+-%destructor { stmt_free($$); }	nat_stmt nat_stmt_alloc masq_stmt masq_stmt_alloc redir_stmt redir_stmt_alloc
++%type <stmt>			nat_stmt nat_stmt_alloc npt_stmt npt_stmt_alloc masq_stmt masq_stmt_alloc redir_stmt redir_stmt_alloc
++%destructor { stmt_free($$); }	nat_stmt nat_stmt_alloc npt_stmt npt_stmt_alloc masq_stmt masq_stmt_alloc redir_stmt redir_stmt_alloc
+ %type <val>			nf_nat_flags nf_nat_flag offset_opt
+ %type <stmt>			tproxy_stmt
+ %destructor { stmt_free($$); }	tproxy_stmt
+@@ -3212,6 +3214,7 @@ stmt			:	verdict_stmt
+ 			|	log_stmt	close_scope_log
+ 			|	reject_stmt	close_scope_reject
+ 			|	nat_stmt	close_scope_nat
++			|	npt_stmt	close_scope_nat
+ 			|	tproxy_stmt	close_scope_tproxy
+ 			|	queue_stmt
+ 			|	ct_stmt
+@@ -3689,6 +3692,13 @@ nat_stmt_alloc		:	SNAT	{ $$ = nat_stmt_a
+ 			|	DNAT	{ $$ = nat_stmt_alloc(&@$, __NFT_NAT_DNAT); }
+ 			;
+
++npt_stmt		:	npt_stmt_alloc	npt_stmt_args
++			;
++
++npt_stmt_alloc		:	SNPT	{ $$ = nat_stmt_alloc(&@$, NFT_NAT_SNPT); }
++			|	DNPT	{ $$ = nat_stmt_alloc(&@$, NFT_NAT_DNPT); }
++			;
++
+ tproxy_stmt		:	TPROXY TO stmt_expr
+ 			{
+ 				$$ = tproxy_stmt_alloc(&@$);
+@@ -3988,6 +3998,15 @@ nat_stmt_args		:	stmt_expr
+ 			}
+ 			;
+
++npt_stmt_args		:	stmt_expr NUM	TO	stmt_expr NUM
++			{
++				$<stmt>0->nat.src_pfx = $1;
++				$<stmt>0->nat.src_pfx_len = $2;
++				$<stmt>0->nat.dst_pfx = $4;
++				$<stmt>0->nat.dst_pfx_len = $5;
++			}
++			;
++
+ masq_stmt		:	masq_stmt_alloc		masq_stmt_args
+ 			|	masq_stmt_alloc
+ 			;
+@@ -5061,6 +5080,8 @@ keyword_expr		:	ETHER   close_scope_eth
+ 			|	ARP	close_scope_arp { $$ = symbol_value(&@$, "arp"); }
+ 			|	DNAT	close_scope_nat	{ $$ = symbol_value(&@$, "dnat"); }
+ 			|	SNAT	close_scope_nat	{ $$ = symbol_value(&@$, "snat"); }
++			|	DNPT	close_scope_nat { $$ = symbol_value(&@$, "dnpt"); }
++			|	SNPT	close_scope_nat { $$ = symbol_value(&@$, "snpt"); }
+ 			|	ECN			{ $$ = symbol_value(&@$, "ecn"); }
+ 			|	RESET	close_scope_reset	{ $$ = symbol_value(&@$, "reset"); }
+ 			|	DESTROY	close_scope_destroy	{ $$ = symbol_value(&@$, "destroy"); }
