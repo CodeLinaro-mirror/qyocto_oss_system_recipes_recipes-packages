@@ -6,7 +6,7 @@ LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/${LICENSE};md5
 
 FILESPATH =+ "${TOPDIR}/../boot/:"
 
-COMPATIBLE_MACHINE = "(ipq40xx|ipq807x|ipq95xx|ipq53xx|ipq95xx_64|ipq53xx_64|ipq54xx_64)"
+COMPATIBLE_MACHINE = "(ipq40xx|ipq807x|ipq95xx|ipq53xx|ipq95xx_64|ipq53xx_64|ipq54xx_64|ipq54xx|ipq52xx_64|ipq52xx|ipq96xx_64|ipq96xx)"
 
 SRC_URI = "file://u-boot \
            file://config"
