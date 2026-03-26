@@ -307,7 +307,8 @@ mount_wifi_fw (){
         if [ -e /lib/firmware/$arch/WIFI_FW/board-2.bin ]; then
 
                 case "$arch" in
-                        IPQ5332)
+                        IPQ5332 | \
+                        IPQ5424)
                                 mkdir -p /lib/firmware/ath12k/$arch/$hw
                                 cd /lib/firmware/ath12k/$arch/$hw/
                                 ;;
@@ -319,6 +320,38 @@ mount_wifi_fw (){
                 ln -sf /lib/firmware/$arch/WIFI_FW/board-2.bin .
                 ln -sf /tmp/$arch/caldata.bin .
                 ln -sf /lib/firmware/$arch/qdss_trace_config.bin .
+                ln -sf /lib/firmware/$arch/WIFI_FW/q6_fw*  .
+                ln -sf /lib/firmware/$arch/WIFI_FW/iu_fw*  .
+
+                case $board_name in
+                        ap-mi01.3|ap-mi01.3-c3|ap-mi01.3-c2|ap-mi04.1|ap-mi04.1-c2|ap-mi01.2|ap-mi01.2-c2|ap-mi01.6|ap-mi01.12|ap-mi01.14|ap-mi04.3|ap-mi04.5|ap-mi01.3-c5)
+                                #caldata.bin --> ahb 2GHz
+                                if [ -e /lib/firmware/IPQ5332/caldata.bin ]; then
+                                        ln -sf /lib/firmware/IPQ5332/caldata.bin cal-ahb-c000000.wifi.bin
+                                fi
+                        ;;
+                        *)
+                                #No sym links
+                        ;;
+                esac
+
+                case $board_name in
+                        rdp466* |\
+                        rdp487* |\
+                        rdp464* |\
+                        rdp485* |\
+                        rdp496)
+                                #caldata.bin --> ahb 2GHz
+                                if [ -e /lib/firmware/IPQ5424/caldata.bin ]; then
+                                        ln -sf /lib/firmware/IPQ5424/caldata.bin cal-ahb-c000000.wifi.bin
+                                fi
+                        ;;
+                        *)
+
+                                #No sym links
+                        ;;
+                esac
+
         fi
 
         if [ -d /lib/firmware/$arch/WIFI_FW/qcn9000 ]; then
@@ -384,6 +417,9 @@ mount_wifi_fw (){
 
 boot() {
  # . /lib/functions/system.sh
+
+	echo "ini" >  /sys/module/firmware_class/parameters/path
+
         if grep -q "IPQ5424" /proc/device-tree/model; then
                 local platform=$(grep -ao "IPQ.*" /proc/device-tree/model | awk '{print $1}')
                 local board=$(grep -ao "IPQ.*" /proc/device-tree/model | awk '{print $2}')
