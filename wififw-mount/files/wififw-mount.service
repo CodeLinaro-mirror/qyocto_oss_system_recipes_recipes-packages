@@ -17,6 +17,7 @@
 Description=QTI Wi-Fi Firmware Mounting Service
 After=initoverlay.service
 DefaultDependencies=no
+Before=systemd-modules-load.service
 Before=ipq-boot.service
 
 [Service]
@@ -27,4 +28,5 @@ RemainAfterExit=Yes
 StandardOutput=syslog+console
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=sysinit.target
+RequiredBy=systemd-modules-load.service
