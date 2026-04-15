@@ -160,7 +160,7 @@ mount_wifi_fw (){
         ;;
         esac
 
-	if [ "$arch" == "IPQ5424" ]; then
+	if [ "$arch" == "IPQ5424" ] || [ "$arch" == "IPQ5210" ] || [ "$arch" == "IPQ9650" ]; then
 		local index=$(get_partname $part_name $arch)
 		if [ "$index" == "1" ]; then
 			part_name=${part_name}_${index}
@@ -170,7 +170,7 @@ mount_wifi_fw (){
 		part_name=$(get_partname_legacy $part_name)
 	fi
 
-        if [[ "$arch" == "IPQ9574" ]] || [[ "$arch" == "IPQ5332" ]] || [[ "$arch" == "IPQ5424" ]]; then
+        if [[ "$arch" == "IPQ9574" ]] || [[ "$arch" == "IPQ5332" ]] || [[ "$arch" == "IPQ5424" ]] || [[ "$arch" == "IPQ5210" ]] || [[ "$arch" == "devsoc" ]] || [[ "$arch" == "IPQ9650" ]]; then
                 wifi_on_rootfs="1"
         fi
 
@@ -312,6 +312,10 @@ mount_wifi_fw (){
                                 mkdir -p /lib/firmware/ath12k/$arch/$hw
                                 cd /lib/firmware/ath12k/$arch/$hw/
                                 ;;
+			IPQ5210 |\
+			IPQ9650)
+				:   # no operation
+				;;
                         *)
                                 mkdir -p /lib/firmware/ath11k/$arch/$hw
                                 cd /lib/firmware/ath11k/$arch/$hw/
@@ -420,7 +424,7 @@ boot() {
 
 	echo "ini" >  /sys/module/firmware_class/parameters/path
 
-        if grep -q "IPQ5424" /proc/device-tree/model; then
+        if grep -Eq "IPQ5424|IPQ5210|IPQ9650" /proc/device-tree/model; then
                 local platform=$(grep -ao "IPQ.*" /proc/device-tree/model | awk '{print $1}')
                 local board=$(grep -ao "IPQ.*" /proc/device-tree/model | awk '{print $2}')
         else
@@ -435,6 +439,10 @@ boot() {
                 mount_wifi_fw "IPQ8074"
         elif [ "$platform" == "IPQ5424" ]; then
                 mount_wifi_fw "IPQ5424"
+	elif [ "$platform" == "IPQ5210" ]; then
+		mount_wifi_fw "IPQ5210"
+	elif [[ "$platform" == IPQ9650 ]]; then
+		mount_wifi_fw "IPQ9650"
         else
                 echo "\nInvalid Target"
         fi
@@ -450,12 +458,12 @@ stop_wifi_fw() {
         local nor_flash=""
         arch=$1
 
-        if [[ "$arch" == "IPQ6018" ]] || [[ "$arch" == "IPQ5018" ]] || [[ "$arch" == "IPQ9574" ]] || [[ "$arch" == "IPQ5332" ]] || [[ "$arch" == "IPQ5424" ]]; then
+        if [[ "$arch" == "IPQ6018" ]] || [[ "$arch" == "IPQ5018" ]] || [[ "$arch" == "IPQ9574" ]] || [[ "$arch" == "IPQ5332" ]] || [[ "$arch" == "IPQ5424" ]] || [[ "$arch" == "IPQ5210" ]] || [[ "$arch" == "IPQ9650" ]]; then
                 part_name="rootfs"
                 wifi_on_rootfs="1"
         fi
 
-	if [ "$arch" == "IPQ5424" ]; then
+	if [ "$arch" == "IPQ5424" ] || [ "$arch" == "IPQ5210" ] || [ "$arch" == "IPQ9650" ]; then
                 local index=$(get_partname $part_name $arch)
                 if [ "$index" == "1" ]; then
                         part_name=${part_name}_${index}
@@ -488,7 +496,7 @@ stop_wifi_fw() {
 
 
 stop() {
-        if grep -q "IPQ5424" /proc/device-tree/model; then
+        if grep -Eq "IPQ5424|IPQ5210|IPQ9650" /proc/device-tree/model; then
                 local platform=$(grep -ao "IPQ.*" /proc/device-tree/model | awk '{print $1}')
                 local board=$(grep -ao "IPQ.*" /proc/device-tree/model | awk '{print $2}')
         else
@@ -504,6 +512,10 @@ stop() {
                 stop_wifi_fw "IPQ8074"
         elif [ "$platform" == "IPQ5424" ]; then
                 stop_wifi_fw "IPQ5424"
+	elif [ "$platform" == "IPQ5210" ]; then
+		stop_wifi_fw "IPQ5210"
+	elif [[ "$platform" == "IPQ9650" ]]; then
+		stop_wifi_fw "IPQ9650"
         else
                 echo "\nInvalid Target"
                 return 0
