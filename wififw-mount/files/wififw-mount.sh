@@ -34,6 +34,52 @@ create_soft_link()
         fi
 }
 
+update_ath12k_module_parameters()
+{
+        # modprobe reads options from /etc/modprobe.d/ - this is what systemd-modules-load uses
+        ath12k_modprobe_conf="/etc/modprobe.d/ath12k.conf"
+        [ ! -e "$ath12k_modprobe_conf" ] && {
+                echo "Error: ath12k modprobe conf not found at $ath12k_modprobe_conf" > /dev/console
+                return
+        }
+
+        boot_arguments=$(cat /proc/cmdline)
+        module_params=""
+
+        # Parse boot arguments to extract ath12k-specific parameters (ath12k_<param>=<val>)
+        for argument in $boot_arguments; do
+                case "$argument" in
+                        ath12k_*=*)
+                                param="${argument#ath12k_}"
+                                module_params="$module_params $param"
+                                ;;
+                esac
+        done
+
+        # Build the options line in modprobe.d format: "options ath12k param=val ..."
+        options_line="options ath12k dyndbg=+p debug_mask=0xffffffff"
+
+        # Append all unique ath12k_* parameters parsed from cmdline
+        for param in $module_params; do
+                param_name="${param%%=*}"
+                if ! echo "$options_line" | grep -qw "$param_name"; then
+                        options_line="$options_line $param"
+                fi
+        done
+
+        # Replace the 'options ath12k' line in the modprobe conf, preserving any other lines
+        grep -v "^options ath12k" "$ath12k_modprobe_conf" > /tmp/ath12k_modprobe_rest
+        {
+                echo "$options_line"
+                cat /tmp/ath12k_modprobe_rest
+        } > "$ath12k_modprobe_conf"
+        rm -f /tmp/ath12k_modprobe_rest
+
+        echo "ath12k: updated $ath12k_modprobe_conf:" > /dev/console
+        cat "$ath12k_modprobe_conf" > /dev/console
+}
+
+
 get_partname() {
 	local part_name=""
 	local parse_value=4
@@ -273,6 +319,12 @@ mount_wifi_fw (){
 		mkdir -p /lib/firmware/qcn6432 && cd /lib/firmware/qcn6432 && create_soft_link /lib/firmware/$arch/WIFI_FW/qcn6432/qdss* .
 	fi
 
+	if [ -d /lib/firmware/$arch/WIFI_FW/qcn9625 ]; then
+		cd $fwfolder && mkdir -p qcn9625 && mkdir -p /vendor/firmware/qcn9625
+		cd qcn9625 && ln -s /lib/firmware/$arch/WIFI_FW/qcn9625/*.* .
+		mkdir -p /lib/firmware/qcn9625 && cd /lib/firmware/qcn9625 && create_soft_link /lib/firmware/$arch/WIFI_FW/qcn9625/qdss* .
+	fi
+
         mkdir -p $fwfolder/$arch
         cd  $fwfolder/$arch && ln -s /lib/firmware/$arch/WIFI_FW/*.* .
         cd  /lib/firmware/$arch && create_soft_link /lib/firmware/$arch/WIFI_FW/qdss* .
@@ -300,6 +352,10 @@ mount_wifi_fw (){
                         cd /lib/firmware
                         create_soft_link /lib/firmware/$arch/WIFI_FW/qcn9000/firmware_rdp_feature.ini .
                 fi
+        fi
+
+        if [[ "$arch" == "IPQ9650" ]]; then
+            update_ath12k_module_parameters
         fi
 
         do_load_ipq4019_board_bin
@@ -407,19 +463,19 @@ mount_wifi_fw (){
                         ln -s /lib/firmware/$arch/WIFI_FW/qcn9224/qdss_trace_config.bin .
                 fi
         fi
-	if [ -d /lib/firmware/$arch/WIFI_FW/qcn9625 ]; then
-                if [  -e /lib/firmware/$arch/WIFI_FW/qcn9625/board-2.bin ]; then
-                        mkdir -p /lib/firmware/ath12k/QCN9625/hw1.0/
-                        cd /lib/firmware/ath12k/QCN9625/hw1.0/
-                        ln -s /lib/firmware/$arch/WIFI_FW/qcn9625/m3.bin .
-                        ln -s /lib/firmware/$arch/WIFI_FW/qcn9625/amss.bin .
-                        ln -s /lib/firmware/$arch/WIFI_FW/qcn9625/mcss.bin .
-                        ln -s /lib/firmware/$arch/WIFI_FW/qcn9625/aux.bin .
-                        ln -s /lib/firmware/$arch/WIFI_FW/qcn9625/amss_dualmac.bin .
-                        ln -s /lib/firmware/$arch/WIFI_FW/qcn9625/board-2.bin .
-                        ln -s /lib/firmware/$arch/WIFI_FW/qcn9625/regdb.bin .
-                        ln -s /lib/firmware/$arch/WIFI_FW/qcn9625/qdss_trace_config.bin .
-                fi
+        if [ -d /lib/firmware/$arch/WIFI_FW/qcn9625 ]; then
+            if [  -e /lib/firmware/$arch/WIFI_FW/qcn9625/board-2.bin ]; then
+                mkdir -p /lib/firmware/ath12k/QCN9625/hw1.0/
+                cd /lib/firmware/ath12k/QCN9625/hw1.0/
+                ln -s /lib/firmware/$arch/WIFI_FW/qcn9625/m3.bin .
+                ln -s /lib/firmware/$arch/WIFI_FW/qcn9625/amss.bin .
+                ln -s /lib/firmware/$arch/WIFI_FW/qcn9625/mcss.bin .
+                ln -s /lib/firmware/$arch/WIFI_FW/qcn9625/aux.bin .
+                ln -s /lib/firmware/$arch/WIFI_FW/qcn9625/amss_dualmac.bin .
+                ln -s /lib/firmware/$arch/WIFI_FW/qcn9625/board-2.bin .
+                ln -s /lib/firmware/$arch/WIFI_FW/qcn9625/regdb.bin .
+                ln -s /lib/firmware/$arch/WIFI_FW/qcn9625/qdss_trace_config.bin .
+            fi
         fi
 	if [ -d /lib/firmware/$arch/WIFI_FW ]; then
                 if [  -e /lib/firmware/$arch/WIFI_FW/board-2.bin ]; then
@@ -484,7 +540,7 @@ stop_wifi_fw() {
                         ubi_part_name=${part_name}_${index}
                 fi
         else
-                part_name=$(get_partname_legacy $part_name)        
+                part_name=$(get_partname_legacy $part_name)
 	fi
 
         emmc_part=$(find_mmc_part $part_name 2> /dev/null)
@@ -557,4 +613,3 @@ case "$1" in
         exit 3
         ;;
 esac
-
