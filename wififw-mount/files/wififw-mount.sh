@@ -36,6 +36,9 @@ create_soft_link()
 
 update_ath12k_module_parameters()
 {
+        # $1 = arch (e.g. IPQ9650, IPQ5332, …)
+        local arch="$1"
+
         # modprobe reads options from /etc/modprobe.d/ - this is what systemd-modules-load uses
         ath12k_modprobe_conf="/etc/modprobe.d/ath12k.conf"
         [ ! -e "$ath12k_modprobe_conf" ] && {
@@ -44,28 +47,48 @@ update_ath12k_module_parameters()
         }
 
         boot_arguments=$(cat /proc/cmdline)
-        module_params=""
 
-        # Parse boot arguments to extract ath12k-specific parameters (ath12k_<param>=<val>)
-        for argument in $boot_arguments; do
-                case "$argument" in
-                        ath12k_*=*)
-                                param="${argument#ath12k_}"
-                                module_params="$module_params $param"
-                                ;;
-                esac
-        done
+        # Read the existing options line (or start a fresh one)
+        existing_line=$(grep "^options ath12k" "$ath12k_modprobe_conf")
+        if [ -z "$existing_line" ]; then
+                options_line="options ath12k dyndbg=+p debug_mask=0xffffffff"
+        else
+                options_line="$existing_line"
+        fi
 
-        # Build the options line in modprobe.d format: "options ath12k param=val ..."
-        options_line="options ath12k dyndbg=+p debug_mask=0xffffffff"
+        # ----------------------------------------------------------------
+        # IPQ9650-specific: parse ath12k_<param>=<val> from /proc/cmdline
+        # and append any new ones to the options line.
+        # ----------------------------------------------------------------
+        if [ "$arch" = "IPQ9650" ]; then
+                for argument in $boot_arguments; do
+                        case "$argument" in
+                                ath12k_*=*)
+                                        param="${argument#ath12k_}"
+                                        param_name="${param%%=*}"
+                                        if ! echo "$options_line" | grep -qw "$param_name"; then
+                                                options_line="$options_line $param"
+                                        fi
+                                        ;;
+                        esac
+                done
+        fi
 
-        # Append all unique ath12k_* parameters parsed from cmdline
-        for param in $module_params; do
-                param_name="${param%%=*}"
-                if ! echo "$options_line" | grep -qw "$param_name"; then
-                        options_line="$options_line $param"
+        # ----------------------------------------------------------------
+        # Universal: sync ftm_mode in modprobe conf with wifi_ftm_mode
+        # bootarg for ALL IPQ chipsets.
+        #   wifi_ftm_mode present  -> add ftm_mode=1 if not already there
+        #   wifi_ftm_mode absent   -> strip any previously written ftm_mode=*
+        # ----------------------------------------------------------------
+        if echo "$boot_arguments" | grep -qw "wifi_ftm_mode"; then
+                if ! echo "$options_line" | grep -qw "ftm_mode"; then
+                        options_line="$options_line ftm_mode=1"
                 fi
-        done
+                echo "ath12k: wifi_ftm_mode in cmdline, setting ftm_mode=1" > /dev/console
+        else
+                # Remove any ftm_mode=<val> token left by a previous FTM boot
+                options_line=$(echo "$options_line" | sed 's/[[:space:]]*ftm_mode=[^[:space:]]*//')
+        fi
 
         # Replace the 'options ath12k' line in the modprobe conf, preserving any other lines
         grep -v "^options ath12k" "$ath12k_modprobe_conf" > /tmp/ath12k_modprobe_rest
@@ -78,7 +101,6 @@ update_ath12k_module_parameters()
         echo "ath12k: updated $ath12k_modprobe_conf:" > /dev/console
         cat "$ath12k_modprobe_conf" > /dev/console
 }
-
 
 get_partname() {
 	local part_name=""
@@ -354,9 +376,10 @@ mount_wifi_fw (){
                 fi
         fi
 
-        if [[ "$arch" == "IPQ9650" ]]; then
-            update_ath12k_module_parameters
-        fi
+        # Update ath12k module parameters for this chipset.
+        # ftm_mode=1 propagation is universal; ath12k_* cmdline params are
+        # only parsed for IPQ9650 (original behaviour preserved).
+        update_ath12k_module_parameters "$arch"
 
         do_load_ipq4019_board_bin
 
