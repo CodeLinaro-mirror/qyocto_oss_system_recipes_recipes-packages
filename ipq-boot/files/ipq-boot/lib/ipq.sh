@@ -20,6 +20,8 @@ IPQ_MODEL=
 ipq_board_detect() {
 	local machine
 	local name
+	local pon_dp
+	local pon_support
 
 	machine=$(cat /proc/device-tree/model)
 
@@ -37,6 +39,14 @@ ipq_board_detect() {
 
 	if grep -Eq 'ap-al05|ap-al06|ap-mi01.2-c2|rdp485|rdp496' /tmp/sysinfo/board_name; then
 		touch /tmp/fontanaenabled
+	fi
+
+	if grep -Eq 'ipq5210' /tmp/sysinfo/board_name; then
+		pon_dp=$(ls /proc/device-tree/soc@0 | grep '^dp[0-9][0-9]*$' | sort | tail -n 1)
+		pon_support=$(ls -la /proc/device-tree/soc@0/${pon_dp} | grep gem_port)
+		if [ ! -z "$pon_support" ]; then
+			touch /tmp/fontanaenabled
+		fi
 	fi
 }
 
