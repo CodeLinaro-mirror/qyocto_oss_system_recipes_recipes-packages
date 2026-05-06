@@ -36,6 +36,9 @@ create_soft_link()
 
 update_ath12k_module_parameters()
 {
+        # $1 = arch (e.g. IPQ9650, IPQ5332, …)
+        local arch="$1"
+
         # modprobe reads options from /etc/modprobe.d/ - this is what systemd-modules-load uses
         ath12k_modprobe_conf="/etc/modprobe.d/ath12k.conf"
         [ ! -e "$ath12k_modprobe_conf" ] && {
@@ -44,28 +47,48 @@ update_ath12k_module_parameters()
         }
 
         boot_arguments=$(cat /proc/cmdline)
-        module_params=""
 
-        # Parse boot arguments to extract ath12k-specific parameters (ath12k_<param>=<val>)
-        for argument in $boot_arguments; do
-                case "$argument" in
-                        ath12k_*=*)
-                                param="${argument#ath12k_}"
-                                module_params="$module_params $param"
-                                ;;
-                esac
-        done
+        # Read the existing options line (or start a fresh one)
+        existing_line=$(grep "^options ath12k" "$ath12k_modprobe_conf")
+        if [ -z "$existing_line" ]; then
+                options_line="options ath12k dyndbg=+p debug_mask=0xffffffff"
+        else
+                options_line="$existing_line"
+        fi
 
-        # Build the options line in modprobe.d format: "options ath12k param=val ..."
-        options_line="options ath12k dyndbg=+p debug_mask=0xffffffff"
+        # ----------------------------------------------------------------
+        # IPQ9650-specific: parse ath12k_<param>=<val> from /proc/cmdline
+        # and append any new ones to the options line.
+        # ----------------------------------------------------------------
+        if [ "$arch" = "IPQ9650" ]; then
+                for argument in $boot_arguments; do
+                        case "$argument" in
+                                ath12k_*=*)
+                                        param="${argument#ath12k_}"
+                                        param_name="${param%%=*}"
+                                        if ! echo "$options_line" | grep -qw "$param_name"; then
+                                                options_line="$options_line $param"
+                                        fi
+                                        ;;
+                        esac
+                done
+        fi
 
-        # Append all unique ath12k_* parameters parsed from cmdline
-        for param in $module_params; do
-                param_name="${param%%=*}"
-                if ! echo "$options_line" | grep -qw "$param_name"; then
-                        options_line="$options_line $param"
+        # ----------------------------------------------------------------
+        # Universal: sync ftm_mode in modprobe conf with wifi_ftm_mode
+        # bootarg for ALL IPQ chipsets.
+        #   wifi_ftm_mode present  -> add ftm_mode=1 if not already there
+        #   wifi_ftm_mode absent   -> strip any previously written ftm_mode=*
+        # ----------------------------------------------------------------
+        if echo "$boot_arguments" | grep -qw "wifi_ftm_mode"; then
+                if ! echo "$options_line" | grep -qw "ftm_mode"; then
+                        options_line="$options_line ftm_mode=1"
                 fi
-        done
+                echo "ath12k: wifi_ftm_mode in cmdline, setting ftm_mode=1" > /dev/console
+        else
+                # Remove any ftm_mode=<val> token left by a previous FTM boot
+                options_line=$(echo "$options_line" | sed 's/[[:space:]]*ftm_mode=[^[:space:]]*//')
+        fi
 
         # Replace the 'options ath12k' line in the modprobe conf, preserving any other lines
         grep -v "^options ath12k" "$ath12k_modprobe_conf" > /tmp/ath12k_modprobe_rest
@@ -79,6 +102,40 @@ update_ath12k_module_parameters()
         cat "$ath12k_modprobe_conf" > /dev/console
 }
 
+caldata_symlink_creation(){
+    var=0
+    local brdid=""
+    local art_slot=""
+    local pciid=""
+
+    while read -r line
+    do
+        board=$(echo $line | cut -f1 -d',')
+        if [[ "$board" == "$1" ]]; then
+            var=$((var+1))
+            #$2 passed as an argument should be ftm.conf line index within the ftm.conf for a given board/RDP
+            if [[ $var == $2 ]]; then
+                local brdid=$(echo $line | cut -f2 -d',')
+                local art_slot=$(echo $line | cut -f3 -d',')
+                local pciid=$(echo $line | cut -f6 -d',')
+                break
+            fi
+        fi
+    done < /lib/firmware/ftm.conf
+
+    if [ -z "$brdid" ] || [ -z "$art_slot" ] || [ -z "$pciid" ]; then
+        echo "caldata_symlink_creation: no entry found for board=$1 index=$2" > /dev/console
+        return 1
+    fi
+
+    if [ -e "/lib/firmware/qcn9224/caldata_${art_slot}.b${brdid}" ]; then
+        ln -sf "/lib/firmware/qcn9224/caldata_${art_slot}.b${brdid}" \
+            "cal-pci-000${pciid}:01:00.0.bin"
+    elif [ -e "/lib/firmware/qcn9625/caldata_${art_slot}.b${brdid}" ]; then
+        ln -sf "/lib/firmware/qcn9625/caldata_${art_slot}.b${brdid}" \
+            "cal-pci-000${pciid}:01:00.0.bin"
+    fi
+}
 
 get_partname() {
 	local part_name=""
@@ -319,11 +376,22 @@ mount_wifi_fw (){
 		mkdir -p /lib/firmware/qcn6432 && cd /lib/firmware/qcn6432 && create_soft_link /lib/firmware/$arch/WIFI_FW/qcn6432/qdss* .
 	fi
 
-	if [ -d /lib/firmware/$arch/WIFI_FW/qcn9625 ]; then
-		cd $fwfolder && mkdir -p qcn9625 && mkdir -p /vendor/firmware/qcn9625
-		cd qcn9625 && ln -s /lib/firmware/$arch/WIFI_FW/qcn9625/*.* .
-		mkdir -p /lib/firmware/qcn9625 && cd /lib/firmware/qcn9625 && create_soft_link /lib/firmware/$arch/WIFI_FW/qcn9625/qdss* .
-	fi
+    if [ -d /lib/firmware/$arch/WIFI_FW/qcn9625 ]; then
+        cd  $fwfolder && mkdir -p qcn9625 && mkdir -p /vendor/firmware/qcn9625
+        cd qcn9625 && ln -s /lib/firmware/$arch/WIFI_FW/qcn9625/*.* .
+        cd /vendor/firmware/qcn9625 && create_soft_link /lib/firmware/$arch/WIFI_FW/qcn9625/Data.msc .
+        create_soft_link Data.msc Data_dualmac.msc
+        mkdir -p /lib/firmware/qcn9625 && cd /lib/firmware/qcn9625 && create_soft_link /lib/firmware/$arch/WIFI_FW/qcn9625/qdss* .
+    fi
+
+    if [ -d /lib/firmware/$arch/WIFI_FW/qcn9589 ]; then
+        cd  $fwfolder && mkdir -p qcn9589 && mkdir -p /vendor/firmware/qcn9589
+        cd qcn9589 && ln -s /lib/firmware/$arch/WIFI_FW/qcn9589/*.* .
+        cd /vendor/firmware/qcn9589 && create_soft_link /lib/firmware/$arch/WIFI_FW/qcn9589/Data.msc .
+        create_soft_link Data.msc Data_dualmac.msc
+        mkdir -p /lib/firmware/qcn9589 && cd /lib/firmware/qcn9589 && create_soft_link /lib/firmware/$arch/WIFI_FW/qcn9589/qdss* .
+    fi
+
 
         mkdir -p $fwfolder/$arch
         cd  $fwfolder/$arch && ln -s /lib/firmware/$arch/WIFI_FW/*.* .
@@ -354,9 +422,10 @@ mount_wifi_fw (){
                 fi
         fi
 
-        if [[ "$arch" == "IPQ9650" ]]; then
-            update_ath12k_module_parameters
-        fi
+        # Update ath12k module parameters for this chipset.
+        # ftm_mode=1 propagation is universal; ath12k_* cmdline params are
+        # only parsed for IPQ9650 (original behaviour preserved).
+        update_ath12k_module_parameters "$arch"
 
         do_load_ipq4019_board_bin
 
@@ -459,9 +528,73 @@ mount_wifi_fw (){
                         ln -s /lib/firmware/$arch/WIFI_FW/qcn9224/amss.bin .
                         ln -s /lib/firmware/$arch/WIFI_FW/qcn9224/amss_dualmac.bin .
                         ln -s /lib/firmware/$arch/WIFI_FW/qcn9224/board-2.bin .
-                        ln -s /lib/firmware/$arch/WIFI_FW/qcn9224/regdb.bin .
                         ln -s /lib/firmware/$arch/WIFI_FW/qcn9224/qdss_trace_config.bin .
                 fi
+                if [ -e /lib/firmware/$arch/WIFI_FW/qcn9224/fw_ini_cfg.bin ]; then
+                    ln -s /lib/firmware/$arch/WIFI_FW/qcn9224/fw_ini_cfg.bin .
+                fi
+                if [ -e /lib/firmware/$arch/WIFI_FW/qcn9224/regdb.bin ]; then
+                    ln -s /lib/firmware/$arch/WIFI_FW/qcn9224/regdb.bin .
+                fi
+
+            case $board_name in
+                ap-al02-c4 |\
+                ap-al05)
+                    caldata_symlink_creation "$board_name" "1"
+                    caldata_symlink_creation "$board_name" "2"
+                    caldata_symlink_creation "$board_name" "3"
+                ;;
+                ap-al02-c6 |\
+                ap-al06 |\
+                ap-mi01.2 |\
+                ap-mi01.2-c2)
+                    caldata_symlink_creation "$board_name" "2"
+                    caldata_symlink_creation "$board_name" "3"
+                ;;
+                ap-al02-c9 |\
+                ap-mi01.9)
+                    caldata_symlink_creation "$board_name" "1"
+                    caldata_symlink_creation "$board_name" "2"
+
+                ;;
+                ap-mi01.6)
+                    caldata_symlink_creation "$board_name" "2"
+                ;;
+                ap-mi01.12 |\
+                ap-mi01.14)
+                    caldata_symlink_creation "$board_name" "3"
+                ;;
+                ap-al02-c20)
+                    caldata_symlink_creation "$board_name" "1"
+                    caldata_symlink_creation "$board_name" "2"
+                    caldata_symlink_creation "$board_name" "3"
+                    caldata_symlink_creation "$board_name" "4"
+                ;;
+                *)
+                    #No sym links
+                ;;
+            esac
+            case $board_name in
+                rdp466* | rdp485* | rdp496)
+                    caldata_symlink_creation "$board_name" "2"
+                    caldata_symlink_creation "$board_name" "3"
+                ;;
+                rdp487* )
+                    caldata_symlink_creation "$board_name" "2"
+                ;;
+                rdp464*)
+                    caldata_symlink_creation "$board_name" "2"
+                    caldata_symlink_creation "$board_name" "3"
+                    caldata_symlink_creation "$board_name" "4"
+                ;;
+                rdp498* | rdp500* | rdp501*)
+                    caldata_symlink_creation "$board_name" "1"
+                ;;
+                *)
+                    #No sm links
+                ;;
+            esac
+
         fi
         if [ -d /lib/firmware/$arch/WIFI_FW/qcn9625 ]; then
             if [  -e /lib/firmware/$arch/WIFI_FW/qcn9625/board-2.bin ]; then
@@ -476,7 +609,56 @@ mount_wifi_fw (){
                 ln -s /lib/firmware/$arch/WIFI_FW/qcn9625/regdb.bin .
                 ln -s /lib/firmware/$arch/WIFI_FW/qcn9625/qdss_trace_config.bin .
             fi
+            case $board_name in
+                rdp492*|rdp488*|rdp489*|rdp506*)
+                    caldata_symlink_creation "$board_name" "1"
+                    caldata_symlink_creation "$board_name" "2"
+                    caldata_symlink_creation "$board_name" "3"
+                ;;
+                rdp499* | rdp502* | rdp505*)
+                    caldata_symlink_creation "$board_name" "1"
+                ;;
+                rdp503* | rdp504*)
+                    caldata_symlink_creation "$board_name" "1"
+                    caldata_symlink_creation "$board_name" "2"
+                ;;
+                *)
+                    #No sm links
+                ;;
+            esac
+
         fi
+    if [ -d /lib/firmware/$arch/WIFI_FW/qcn9589 ]; then
+        if [ -e /lib/firmware/$arch/WIFI_FW/qcn9589/board-2.bin ]; then
+            mkdir -p /lib/firmware/ath12k/QCN9589/hw1.0/
+            cd /lib/firmware/ath12k/QCN9589/hw1.0/
+            ln -s /lib/firmware/$arch/WIFI_FW/qcn9589/m3.bin .
+            ln -s /lib/firmware/$arch/WIFI_FW/qcn9589/amss.bin .
+            ln -s /lib/firmware/$arch/WIFI_FW/qcn9589/board-2.bin .
+            if [ -e /lib/firmware/$arch/WIFI_FW/qcn9589/regdb.bin ]; then
+                ln -s /lib/firmware/$arch/WIFI_FW/qcn9589/regdb.bin .
+            fi
+            ln -s /lib/firmware/$arch/WIFI_FW/qcn9589/qdss_trace_config.bin .
+            if [ -e /lib/firmware/$arch/WIFI_FW/qcn9589/aux.bin ]; then
+                ln -s /lib/firmware/$arch/WIFI_FW/qcn9589/aux.bin .
+            fi
+            if [ -e /lib/firmware/$arch/WIFI_FW/qcn9589/mcss.bin ]; then
+                ln -s /lib/firmware/$arch/WIFI_FW/qcn9589/mcss.bin .
+            fi
+
+            case $board_name in
+                rdp464*)
+                    caldata_symlink_creation "$board_name" "1"
+                    caldata_symlink_creation "$board_name" "2"
+                    caldata_symlink_creation "$board_name" "3"
+                ;;
+                *)
+                    #No sm links
+                ;;
+                        esac
+        fi
+    fi
+
 	if [ -d /lib/firmware/$arch/WIFI_FW ]; then
                 if [  -e /lib/firmware/$arch/WIFI_FW/board-2.bin ]; then
                         mkdir -p /lib/firmware/ath12k/IPQ5332/hw1.0/

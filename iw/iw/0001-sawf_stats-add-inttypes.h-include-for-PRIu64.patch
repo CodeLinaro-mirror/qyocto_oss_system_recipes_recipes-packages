@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Sandhya K S <sandhyks@qti.qualcomm.com>
+Date: Mon, 21 Apr 2025 00:00:00 +0530
+Subject: [PATCH] sawf_stats: add <inttypes.h> include for PRIu64
+
+PRIu64 is defined in <inttypes.h>. Without this include, the compiler
+errors out with "expected ')' before 'PRIu64'" and related warnings.
+
+Signed-off-by: Sandhya K S <sandhyks@qti.qualcomm.com>
+---
+ sawf_stats.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+--- a/sawf_stats.c
++++ b/sawf_stats.c
+@@ -17,6 +17,7 @@
+ #include <errno.h>
+ #include <string.h>
+ #include <stdio.h>
++#include <inttypes.h>
+ #include <math.h>
+ 
+ #include <netlink/genl/genl.h>
+-- 
+2.39.0
