@@ -17,7 +17,7 @@ EXTRA_OECMAKE += "-DBUILD_SHARED_LIBS=ON"
 
 do_install() {
     install -d -m0755 ${D}/usr/lib
-    cp ${WORKDIR}/build/src/libcbor.so* ${D}/usr/lib/
+    cp -d ${B}/src/libcbor.so* ${D}/usr/lib/
 
     install -d -m0755 ${D}/usr/include/
     cp ${S}/src/*.h ${D}/usr/include/
@@ -31,6 +31,6 @@ do_install() {
 FILES_${PN} = "/usr/lib/libcbor.so*"
 FILES:${PN}-dev += "/usr/include/* /usr/include/cbor/*"
 
-INSANE_SKIP_${PN} += "already-stripped"
+INSANE_SKIP_${PN} += "already-stripped dev-so"
 SOLIBS = ".so"
 FILES_SOLIBSDEV = ""
