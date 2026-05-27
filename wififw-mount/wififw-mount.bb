@@ -21,6 +21,11 @@ do_install:append() {
         install -d ${D}${systemd_unitdir}/system
         install -m 0644 ${WORKDIR}/wififw-mount.service  ${D}${systemd_unitdir}/system
 }
+do_install:append:echo() {
+	if ! grep -q '^After=systemrw.mount$' ${D}${systemd_unitdir}/system/wififw-mount.service; then
+		sed -i '/^Before=ipq-boot.service$/a After=systemrw.mount' ${D}${systemd_unitdir}/system/wififw-mount.service
+	fi
+}
 
 FILES:${PN} += " ${bindir}/*  ${systemd_unitdir}/system/*"
 BBCLASSEXTEND += "native"

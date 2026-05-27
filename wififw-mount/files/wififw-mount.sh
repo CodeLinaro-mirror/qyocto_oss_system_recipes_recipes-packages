@@ -674,8 +674,6 @@ mount_wifi_fw (){
 boot() {
  # . /lib/functions/system.sh
 
-	echo "ini" >  /sys/module/firmware_class/parameters/path
-
         if grep -Eq "IPQ5424|IPQ5210|IPQ9650" /proc/device-tree/model; then
                 local platform=$(grep -ao "IPQ.*" /proc/device-tree/model | awk '{print $1}')
                 local board=$(grep -ao "IPQ.*" /proc/device-tree/model | awk '{print $2}')
@@ -683,6 +681,17 @@ boot() {
                 local platform=$(grep -ao "IPQ.*" /proc/device-tree/model | awk -F/ '{print $1}')
                 local board=$(grep -ao "IPQ.*" /proc/device-tree/model | awk -F/ '{print $2}')
         fi
+
+	if grep -Eq "ECHO" /proc/device-tree/model; then
+		local platform="ECHO"
+		local board=$(cat /proc/device-tree/model | sed -e 's/^.*Inc\. //' -e 's/ IDP / /' | tr ' ' '-')
+		/sbin/mount-copybind /systemrw/misc /etc/misc/ipq/ini/
+		mkdir -p /lib/firmware/ath12k/QCN9625
+		ln -sf /firmware/image/qcn9625 ${D}/lib/firmware/ath12k/QCN9625/hw1.0
+	else
+		echo "ini" >  /sys/module/firmware_class/parameters/path
+	fi
+
         if [ "$platform" == "IPQ9574" ]; then
                 mount_wifi_fw "IPQ9574"
         elif [ "$platform" == "IPQ5332" ]; then
@@ -781,10 +790,17 @@ stop() {
 
 case "$1" in
     start)
-        [ ! -e /tmp/sysinfo/board_name  ] && {
-               . /lib/ipq.sh
-               ipq_board_detect
-        }
+	if ! grep -q "ECHO" /proc/device-tree/model; then
+		[ ! -e /tmp/sysinfo/board_name  ] && {
+		. /lib/ipq.sh
+		ipq_board_detect
+	        }
+	else
+		[ -e "/tmp/sysinfo/" ] || mkdir -p "/tmp/sysinfo/"
+		echo $(cat /proc/device-tree/model | sed -e 's/^.*Inc\. //' -e 's/ IDP / /' | tr ' ' '-') > /tmp/sysinfo/board_name
+		echo $(strings /proc/device-tree/compatible | head -n 1) > /tmp/sysinfo/model
+	fi
+
         boot
         ;;
     stop)
