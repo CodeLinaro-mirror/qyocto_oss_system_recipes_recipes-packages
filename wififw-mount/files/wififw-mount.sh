@@ -102,6 +102,31 @@ update_ath12k_module_parameters()
         cat "$ath12k_modprobe_conf" > /dev/console
 }
 
+#Extended version of caldata_symlink_creation and picks up directory as well from ftm.conf
+caldata_symlink_creation_mr(){
+	var=0
+	while read -r line
+	do
+		board=$(echo $line | cut -f1 -d',')
+		if [[ "$board" == "$1" ]]; then
+			var=$((var+1))
+			#$2 passed as an argument should be ftm.conf line index within the ftm.conf for a given board/RDP
+			if [[ $var == $2 ]]; then
+				local brdid=$(echo $line | cut -f2 -d',')
+				local art_slot=$(echo $line | cut -f3 -d',')
+				local pciid=$(echo $line | cut -f6 -d',')
+				local dir_lib=$(echo $line | cut -f7 -d',')
+				break
+			fi
+		fi
+	done < /lib/firmware/ftm.conf
+
+	if [ -e "/lib/firmware/${dir_lib}/caldata_${art_slot}.b${brdid}" ]; then
+		ln -sf "/lib/firmware/${dir_lib}/caldata_${art_slot}.b${brdid}" \
+			"cal-pci-000${pciid}:01:00.0.bin"
+	fi
+}
+
 caldata_symlink_creation(){
     var=0
     local brdid=""
@@ -130,9 +155,6 @@ caldata_symlink_creation(){
 
     if [ -e "/lib/firmware/qcn9224/caldata_${art_slot}.b${brdid}" ]; then
         ln -sf "/lib/firmware/qcn9224/caldata_${art_slot}.b${brdid}" \
-            "cal-pci-000${pciid}:01:00.0.bin"
-    elif [ -e "/lib/firmware/qcn9625/caldata_${art_slot}.b${brdid}" ]; then
-        ln -sf "/lib/firmware/qcn9625/caldata_${art_slot}.b${brdid}" \
             "cal-pci-000${pciid}:01:00.0.bin"
     fi
 }
@@ -611,16 +633,20 @@ mount_wifi_fw (){
             fi
             case $board_name in
                 rdp492*|rdp488*|rdp489*|rdp506*)
-                    caldata_symlink_creation "$board_name" "1"
-                    caldata_symlink_creation "$board_name" "2"
-                    caldata_symlink_creation "$board_name" "3"
+                    caldata_symlink_creation_mr "$board_name" "1"
+                    caldata_symlink_creation_mr "$board_name" "2"
+                    caldata_symlink_creation_mr "$board_name" "3"
                 ;;
                 rdp499* | rdp502* | rdp505*)
-                    caldata_symlink_creation "$board_name" "1"
+                    caldata_symlink_creation_mr "$board_name" "1"
                 ;;
                 rdp503* | rdp504*)
-                    caldata_symlink_creation "$board_name" "1"
-                    caldata_symlink_creation "$board_name" "2"
+                    caldata_symlink_creation_mr "$board_name" "1"
+                    caldata_symlink_creation_mr "$board_name" "2"
+                ;;
+                rdp507* | rdp490* | rdp491*)
+                    # qcn9625 is the 2nd ftm.conf entry for dual-radio Rimini RDPs
+                    caldata_symlink_creation_mr "$board_name" "2"
                 ;;
                 *)
                     #No sm links
@@ -647,10 +673,13 @@ mount_wifi_fw (){
             fi
 
             case $board_name in
-                rdp464*)
-                    caldata_symlink_creation "$board_name" "1"
-                    caldata_symlink_creation "$board_name" "2"
-                    caldata_symlink_creation "$board_name" "3"
+                rdp507* | rdp490* | rdp491*)
+                    # qcn9589 is the 1st ftm.conf entry for dual-radio Rimini RDPs
+                    caldata_symlink_creation_mr "$board_name" "1"
+                ;;
+                rdp511* | rdp512*)
+                    # single-radio Rimini RDPs, qcn9589 only
+                    caldata_symlink_creation_mr "$board_name" "1"
                 ;;
                 *)
                     #No sm links
