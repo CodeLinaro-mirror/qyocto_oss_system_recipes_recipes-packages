@@ -483,6 +483,94 @@ mount_wifi_fw (){
 
         fi
 
+    if [ -d /lib/firmware/$arch/WIFI_FW/qcn6432 ]; then
+        if [ -e /lib/firmware/$arch/WIFI_FW/qcn6432/board-2.bin ]; then
+            mkdir -p /lib/firmware/ath12k/QCN6432/hw1.0/
+            cd /lib/firmware/ath12k/QCN6432/hw1.0/
+            ln -s /lib/firmware/$arch/WIFI_FW/qcn6432/board-2.bin .
+            if [ -e /lib/firmware/$arch/WIFI_FW/qcn6432/fw_ini_cfg.bin ]; then
+                ln -s /lib/firmware/$arch/WIFI_FW/qcn6432/fw_ini_cfg.bin .
+            fi
+            ln -s /lib/firmware/$arch/WIFI_FW/qcn6432/qdss_trace_config.bin .
+            ln -s /lib/firmware/$arch/WIFI_FW/qcn6432/iu_fw* .
+            ln -s /lib/firmware/$arch/WIFI_FW/q6_fw* .
+
+            case $board_name in
+                ap-mi01.3)
+                    #caldata_1.b0060 --> ahb 5GHz
+                    if [ -e /lib/firmware/qcn6432/caldata_1.b0060 ]; then
+                        ln -sf /lib/firmware/qcn6432/caldata_1.b0060 cal-ahb-soc@0:wifi1@c0000000.bin
+                    fi
+
+                    #caldata_2.b00b0 --> ahb 6GHz
+                    if [ -e /lib/firmware/qcn6432/caldata_2.b00b0 ]; then
+                        ln -sf /lib/firmware/qcn6432/caldata_2.b00b0 cal-ahb-soc@0:wifi2@c0000000.bin
+                    fi
+                ;;
+                ap-mi01.3-c3)
+                    #caldata_1.b0070 --> ahb 5GHz/6GHz
+                    if [ -e /lib/firmware/qcn6432/caldata_1.b0070 ]; then
+                        ln -sf /lib/firmware/qcn6432/caldata_1.b0070 cal-ahb-soc@0:wifi1@c0000000.bin
+                    fi
+                ;;
+                ap-mi01.3-c5)
+                    #caldata_1.b0062 --> ahb 5GHz
+                    if [ -e /lib/firmware/qcn6432/caldata_1.b0062 ]; then
+                        ln -sf /lib/firmware/qcn6432/caldata_1.b0062 cal-ahb-soc@0:wifi1@c0000000.bin
+                    fi
+
+                    #caldata_2.b00b2 --> ahb 6GHz
+                    if [ -e /lib/firmware/qcn6432/caldata_2.b00b2 ]; then
+                        ln -sf /lib/firmware/qcn6432/caldata_2.b00b2 cal-ahb-soc@0:wifi2@c0000000.bin
+                    fi
+                ;;
+                ap-mi04.1)
+                    #caldata_1.b0052 --> ahb 5GHz
+                    if [ -e /lib/firmware/qcn6432/caldata_1.b0052 ]; then
+                        ln -sf /lib/firmware/qcn6432/caldata_1.b0052 cal-ahb-soc@0:wifi1@c0000000.bin
+                    fi
+
+                    #caldata_2.b0091 --> ahb 6GHz
+                    if [ -e /lib/firmware/qcn6432/caldata_2.b0091 ]; then
+                        ln -sf /lib/firmware/qcn6432/caldata_2.b0091 cal-ahb-soc@0:wifi2@c0000000.bin
+                    fi
+                ;;
+                ap-mi01.12)
+                    if [ -e /lib/firmware/qcn6432/caldata_1.b00b0 ]; then
+                        ln -sf /lib/firmware/qcn6432/caldata_1.b00b0 cal-ahb-soc@0:wifi1@c0000000.bin
+                    fi
+                ;;
+                ap-mi01.14|ap-mi01.3-c2)
+                    if [ -e /lib/firmware/qcn6432/caldata_1.b0060 ]; then
+                        ln -sf /lib/firmware/qcn6432/caldata_1.b0060 cal-ahb-soc@0:wifi1@c0000000.bin
+                    fi
+                ;;
+                ap-mi04.1-c2)
+                    #caldata_1.b0053 --> ahb 5GHz
+                    if [ -e /lib/firmware/qcn6432/caldata_1.b0053 ]; then
+                        ln -sf /lib/firmware/qcn6432/caldata_1.b0053 cal-ahb-soc@0:wifi1@c0000000.bin
+                    fi
+                ;;
+                ap-mi04.3)
+                    #caldata_1.b0054 --> ahb 5GHz
+                    if [ -e /lib/firmware/qcn6432/caldata_1.b0054 ]; then
+                        ln -sf /lib/firmware/qcn6432/caldata_1.b0054 cal-ahb-soc@0:wifi1@c0000000.bin
+                    fi
+                ;;
+                ap-mi04.5)
+                                        #caldata_2.b0052 --> ahb 5GHz
+                                        if [ -e /lib/firmware/qcn6432/caldata_2.b0052 ]; then
+                                                ln -sf /lib/firmware/qcn6432/caldata_2.b0052 cal-ahb-soc@0:wifi1@c0000000.bin
+                                        fi
+                                ;;
+                *)
+                    #No sym links
+                ;;
+            esac
+        fi
+    fi
+
+
         if [ -d /lib/firmware/$arch/WIFI_FW/qcn9000 ]; then
                 if [ -e /lib/firmware/$arch/WIFI_FW/qcn9000/board-2.bin ]; then
                         mkdir -p /lib/firmware/ath11k/QCN9074/hw1.0/
