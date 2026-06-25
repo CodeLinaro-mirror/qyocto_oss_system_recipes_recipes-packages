@@ -802,9 +802,24 @@ boot() {
 	if grep -Eq "ECHO" /proc/device-tree/model; then
 		local platform="ECHO"
 		local board=$(cat /proc/device-tree/model | sed -e 's/^.*Inc\. //' -e 's/ IDP / /' | tr ' ' '-')
-		/sbin/mount-copybind /systemrw/misc /etc/misc/ipq/ini/
-		mkdir -p /lib/firmware/ath12k/QCN9625
-		ln -sf /firmware/image/qcn9625 ${D}/lib/firmware/ath12k/QCN9625/hw1.0
+		if [ -d /data/vendor ]; then
+			mkdir -p /data/vendor/updates
+			if [ -d /ini ]; then
+				/sbin/mount-copybind /systemrw/misc /ini/
+				ln -sf /ini/* /data/vendor/updates/
+			else
+				echo "ECHO: /ini not mounted, skipping symlinks" > /dev/console
+			fi
+
+			if [ -d /firmware/image ]; then
+				ln -sf /firmware/image/* /data/vendor/updates/
+			else
+				echo "ECHO: /firmware/image not available, skipping symlinks" > /dev/console
+			fi
+			echo "/data/vendor/updates" > /sys/module/firmware_class/parameters/path
+		else
+			echo "ECHO: /data/vendor not present, skipping updates directory creation" > /dev/console
+		fi
 	else
 		echo "ini" >  /sys/module/firmware_class/parameters/path
 	fi

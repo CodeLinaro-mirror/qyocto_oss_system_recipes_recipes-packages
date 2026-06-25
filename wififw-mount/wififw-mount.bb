@@ -25,6 +25,13 @@ do_install:append:echo() {
 	if ! grep -q '^After=systemrw.mount$' ${D}${systemd_unitdir}/system/wififw-mount.service; then
 		sed -i '/^Before=ipq-boot.service$/a After=systemrw.mount' ${D}${systemd_unitdir}/system/wififw-mount.service
 	fi
+	if ! grep -q '^Requires=systemd-tmpfiles-setup.service$' ${D}${systemd_unitdir}/system/wififw-mount.service; then
+		sed -i '/^Before=ipq-boot.service$/a Requires=systemd-tmpfiles-setup.service' ${D}${systemd_unitdir}/system/wififw-mount.service
+	fi
+	if ! grep -q '^After=systemd-tmpfiles-setup.service$' ${D}${systemd_unitdir}/system/wififw-mount.service; then
+		sed -i '/^Before=ipq-boot.service$/a After=systemd-tmpfiles-setup.service' ${D}${systemd_unitdir}/system/wififw-mount.service
+	fi
+
 }
 
 FILES:${PN} += " ${bindir}/*  ${systemd_unitdir}/system/*"
