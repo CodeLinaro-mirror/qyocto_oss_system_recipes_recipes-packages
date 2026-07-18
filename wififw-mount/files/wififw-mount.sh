@@ -720,7 +720,7 @@ mount_wifi_fw (){
                 ln -s /lib/firmware/$arch/WIFI_FW/qcn9625/qdss_trace_config.bin .
             fi
             case $board_name in
-                rdp492*|rdp488*|rdp489*|rdp506*)
+                rdp492*|rdp488*|rdp489*)
                     caldata_symlink_creation_mr "$board_name" "1"
                     caldata_symlink_creation_mr "$board_name" "2"
                     caldata_symlink_creation_mr "$board_name" "3"
@@ -728,7 +728,7 @@ mount_wifi_fw (){
                 rdp499* | rdp502* | rdp505*)
                     caldata_symlink_creation_mr "$board_name" "1"
                 ;;
-                rdp503* | rdp504*)
+                rdp503* | rdp504* | rdp506*)
                     caldata_symlink_creation_mr "$board_name" "1"
                     caldata_symlink_creation_mr "$board_name" "2"
                 ;;
