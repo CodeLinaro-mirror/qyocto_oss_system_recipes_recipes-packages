@@ -922,16 +922,10 @@ stop() {
 
 case "$1" in
     start)
-	if ! grep -q "ECHO" /proc/device-tree/model; then
-		[ ! -e /tmp/sysinfo/board_name  ] && {
+	[ ! -e /tmp/sysinfo/board_name ] && {
 		. /lib/ipq.sh
 		ipq_board_detect
-	        }
-	else
-		[ -e "/tmp/sysinfo/" ] || mkdir -p "/tmp/sysinfo/"
-		echo $(cat /proc/device-tree/model | sed -e 's/^.*Inc\. //' -e 's/ IDP / /' | tr ' ' '-') > /tmp/sysinfo/board_name
-		echo $(strings /proc/device-tree/compatible | head -n 1) > /tmp/sysinfo/model
-	fi
+	}
 
         boot
         ;;

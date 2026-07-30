@@ -32,6 +32,11 @@ ipq_board_detect() {
 	[ -z "$IPQ_BOARD_NAME" ] && IPQ_BOARD_NAME="$name"
 	[ -z "$IPQ_MODEL" ] && IPQ_MODEL="$machine"
 
+	if echo "$machine" | grep -q "ECHO"; then
+		IPQ_BOARD_NAME="qcom,ap-$(echo "$machine" | sed -e 's/^.*Inc\. //' -e 's/ IDP / /' | tr '[:upper:] ' '[:lower:]-')"
+		IPQ_MODEL="$name"
+	fi
+
 	[ -e "/tmp/sysinfo/" ] || mkdir -p "/tmp/sysinfo/"
 
 	echo "$IPQ_BOARD_NAME" > /tmp/sysinfo/board_name
