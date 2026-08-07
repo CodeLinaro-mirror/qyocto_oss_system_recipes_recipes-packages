@@ -1,0 +1,117 @@
+#!/bin/sh
+# mem-profile board detection — RDK compatible (no OpenWrt uci-defaults.sh required)
+# Generates /etc/mem-profile.json using standard shell only.
+
+MEM_PROFILE_JSON="/etc/mem-profile.json"
+
+board_name() {
+    [ -e /tmp/sysinfo/board_name ] && cat /tmp/sysinfo/board_name || echo "generic"
+}
+
+# Physical DDR size in MB from device tree memory nodes.
+# Falls back to /proc/meminfo MemTotal if DT nodes are unavailable.
+get_physical_ddr_mb() {
+    local total=0 found=0
+
+    for mem in /sys/firmware/devicetree/base/memory@*/reg; do
+        [ -e "$mem" ] || continue
+        found=1
+        local hex cell size_hi size_lo size
+        hex=$(hexdump -v -e '1/1 "%02x"' "$mem" 2>/dev/null)
+        while [ ${#hex} -ge 32 ]; do
+            cell=${hex:0:32}
+            size_hi=${cell:16:8}
+            size_lo=${cell:24:8}
+            size=$(( 0x${size_hi}${size_lo} ))
+            total=$(( total + size ))
+            hex=${hex:32}
+        done
+    done
+
+    if [ "$found" -eq 0 ]; then
+        awk '/MemTotal/ {printf "%d", $2/1024}' /proc/meminfo
+        return
+    fi
+
+    echo $(( total / 1024 / 1024 ))
+}
+
+set_default_profile() {
+    local mem_mb="$1"
+    if [ "$mem_mb" -ge 1024 ]; then
+        min_profile="balanced"; max_profile="high"
+    elif [ "$mem_mb" -ge 512 ]; then
+        min_profile="balanced"; max_profile="balanced"
+    else
+        min_profile="optimized"; max_profile="optimized"
+    fi
+}
+
+board=$(board_name)
+mem_mb=$(get_physical_ddr_mb)
+
+# ── Determine min/max profile for this board ──────────────────────────────────
+case "$board" in
+    qcom,ipq96*)
+        min_profile="optimized"; max_profile="high"
+        ;;
+    qcom,ipq5210-rdp498 |\
+    qcom,ipq5210-rdp499 |\
+    qcom,ipq5210-rdp500 |\
+    qcom,ipq5210-rdp501 |\
+    qcom,ipq5210-rdp502 |\
+    qcom,ipq5210-rdp511 |\
+    qcom,ipq5210-rdp512)
+        min_profile="optimized"; max_profile="high"
+        ;;
+    qcom,ipq5210-rdp503 |\
+    qcom,ipq5210-rdp504)
+        min_profile="balanced"; max_profile="high"
+        ;;
+    qcom,ipq5210-rdp505)
+        min_profile="optimized"; max_profile="balanced"
+        ;;
+    qcom,ipq5210-rdp497)
+        min_profile="optimized"; max_profile="optimized"
+        ;;
+    *)
+        echo "mem-profile: board '${board}' — set default profile" >&2
+        set_default_profile "$mem_mb"
+        ;;
+esac
+
+# ── Write /etc/mem-profile.json (pure shell, no OpenWrt JSON library) ─────────
+cat > "$MEM_PROFILE_JSON" << JSONEOF
+{
+    "board": "${board}",
+    "physical_ddr_mb": ${mem_mb},
+    "mem_profile": {
+        "min": "${min_profile}",
+        "max": "${max_profile}"
+    },
+    "profiles": {
+        "optimized": {
+            "level": 1,
+            "threshold_mb": 256,
+            "ipq_mem_profile": 256,
+            "description": "256 MB DDR - minimal memory footprint",
+            "required_wifi_bands": 2
+        },
+        "balanced": {
+            "level": 2,
+            "threshold_mb": 512,
+            "ipq_mem_profile": 512,
+            "description": "512 MB DDR - balanced memory usage",
+            "required_wifi_bands": 3
+        },
+        "high": {
+            "level": 3,
+            "threshold_mb": 1024,
+            "ipq_mem_profile": 0,
+            "description": "1 GB+ DDR - full feature set (catch-all)",
+            "required_wifi_bands": 3
+        }
+    }
+}
+JSONEOF
+sync
