@@ -802,23 +802,25 @@ boot() {
 	if grep -Eq "ECHO" /proc/device-tree/model; then
 		local platform="ECHO"
 		local board=$(cat /proc/device-tree/model | sed -e 's/^.*Inc\. //' -e 's/ IDP / /' | tr ' ' '-')
-		if [ -d /data/vendor ]; then
-			mkdir -p /data/vendor/updates
-			if [ -d /ini ]; then
-				/sbin/mount-copybind /systemrw/misc /ini/
-				ln -sf /ini/* /data/vendor/updates/
-			else
-				echo "ECHO: /ini not mounted, skipping symlinks" > /dev/console
-			fi
 
-			if [ -d /firmware/image ]; then
-				ln -sf /firmware/image/* /data/vendor/updates/
+		if [ ! -d /systemrw/misc ]; then
+			echo "ECHO: /systemrw/misc not present, creating it" > /dev/console
+			mkdir -p /systemrw/misc
+		fi
+		if [ ! -d /systemrw/misc/internal ]; then
+			echo "ECHO: /systemrw/misc/internal not present, creating it" > /dev/console
+			mkdir -p /systemrw/misc/internal
+		fi
+
+		if [ -d /ini ]; then
+			/sbin/mount-copybind /systemrw/misc /ini/
+			if [ -d /ini/internal ]; then
+				/sbin/mount-copybind /systemrw/misc/internal /ini/internal
 			else
-				echo "ECHO: /firmware/image not available, skipping symlinks" > /dev/console
+				echo "ECHO: /ini/internal not present, skipping /ini/internal bind mount" > /dev/console
 			fi
-			echo "/data/vendor/updates" > /sys/module/firmware_class/parameters/path
 		else
-			echo "ECHO: /data/vendor not present, skipping updates directory creation" > /dev/console
+			echo "ECHO: /ini not present, skipping /ini bind mount" > /dev/console
 		fi
 	else
 		echo "ini" >  /sys/module/firmware_class/parameters/path
