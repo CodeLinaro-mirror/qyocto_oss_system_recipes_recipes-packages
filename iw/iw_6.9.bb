@@ -15,7 +15,7 @@ SRC_URI = "https://mirrors.edge.kernel.org/pub/software/network/iw/iw-${PV}.tar.
 		file://200-reduce_size.patch \
 "
 
-PATCH_DIR = "${TOPDIR}/../src/ipq/qca-wifi-files/openwrt-patches/package/network/utils/iw/patches/"
+PATCH_DIR = "${TOPDIR}/../openwrt-patches/package/network/utils/iw/patches/"
 
 SRC_URI[sha256sum] = "3f2db22ad41c675242b98ae3942dbf3112548c60a42ff739210f2de4e98e4894"
 
