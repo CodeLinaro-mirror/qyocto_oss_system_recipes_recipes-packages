@@ -166,11 +166,16 @@ get_partname() {
 	local trymode_inprogress=$(cat /sys/devices/platform/firmware:scm/trymode_inprogress)
 	if [ ! -z $mtdpart ]; then
 		dd if=/dev/${mtdpart} of=/tmp/bootconfig.bin
-		dumpimage -b $parse_value &> /dev/null
-		if [[ "$?" == 1 ]];then
-			echo "Unable to read bootconfig"
-			return 1
-		fi
+	else
+		mtdpart=0:BOOTCONFIG
+		mmcblock="$(find_mmc_part "$mtdpart")"
+		dd if=${mmcblock} of=/tmp/bootconfig.bin
+	fi
+
+	dumpimage -b $parse_value &> /dev/null
+	if [[ "$?" == 1 ]];then
+		echo "Unable to read bootconfig"
+		return 1
 	fi
 
 	if [ ! -e /tmp/bootconfig_members.txt ]; then
@@ -231,6 +236,16 @@ get_partname_legacy() {
 	echo $part_name
 }
 
+# get_partname_new() - determines partition to mount based on booted bank
+get_partname_new() {
+	local partlabel
+	partlabel=$(cat /proc/cmdline 2>/dev/null | grep -o 'PARTLABEL=[^ ]*' | cut -d= -f2)
+	case "$partlabel" in
+		rootfs-inactive) echo "1" ;;
+		*)               echo "" ;;
+	esac
+}
+
 
 mount_wifi_fw (){
         local emmc_part=""
@@ -285,8 +300,14 @@ mount_wifi_fw (){
         ;;
         esac
 
-	if [ "$arch" == "IPQ5424" ] || [ "$arch" == "IPQ5210" ] || [ "$arch" == "IPQ9650" ]; then
+	if [ "$arch" == "IPQ5424" ]; then
 		local index=$(get_partname $part_name $arch)
+		if [ "$index" == "1" ]; then
+			part_name=${part_name}_${index}
+			ubi_part_name=${ubi_part_name}_${index}
+		fi
+	elif [[ "$arch" == "IPQ5210" ]] || [[ "$arch" == "IPQ9650" ]]; then
+		local index=$(get_partname_new)
 		if [ "$index" == "1" ]; then
 			part_name=${part_name}_${index}
 			ubi_part_name=${ubi_part_name}_${index}
@@ -858,11 +879,17 @@ stop_wifi_fw() {
                 wifi_on_rootfs="1"
         fi
 
-	if [ "$arch" == "IPQ5424" ] || [ "$arch" == "IPQ5210" ] || [ "$arch" == "IPQ9650" ]; then
+	if [ "$arch" == "IPQ5424" ]; then
                 local index=$(get_partname $part_name $arch)
                 if [ "$index" == "1" ]; then
                         part_name=${part_name}_${index}
-                        ubi_part_name=${part_name}_${index}
+                        ubi_part_name=${ubi_part_name}_${index}
+                fi
+        elif [[ "$arch" == "IPQ5210" ]] || [[ "$arch" == "IPQ9650" ]]; then
+                local index=$(get_partname_new)
+                if [ "$index" == "1" ]; then
+                        part_name=${part_name}_${index}
+                        ubi_part_name=${ubi_part_name}_${index}
                 fi
         else
                 part_name=$(get_partname_legacy $part_name)
