@@ -11,19 +11,21 @@ SRC_URI = "file://platform.sh \
 	   file://trymodedone.service \
 	   file://ipq53xx/platform.sh \
 	   file://ipq54xx/platform.sh \
+	   file://ipq52xx/platform.sh \
+	   file://ipq96xx/platform.sh \
 	"
 
 PLATFORMSCRIPTPATH:ipq95xx_64 = "${WORKDIR}/"
 PLATFORMSCRIPTPATH:ipq53xx_64 = "${WORKDIR}/ipq53xx/"
 PLATFORMSCRIPTPATH:ipq54xx_64 = "${WORKDIR}/ipq54xx/"
-PLATFORMSCRIPTPATH:ipq52xx_64 = "${WORKDIR}/"
-PLATFORMSCRIPTPATH:ipq96xx_64 = "${WORKDIR}/"
+PLATFORMSCRIPTPATH:ipq52xx_64 = "${WORKDIR}/ipq52xx/"
+PLATFORMSCRIPTPATH:ipq96xx_64 = "${WORKDIR}/ipq96xx/"
 
 PLATFORMSCRIPTPATH:ipq95xx = "${WORKDIR}/"
 PLATFORMSCRIPTPATH:ipq53xx = "${WORKDIR}/ipq53xx/"
 PLATFORMSCRIPTPATH:ipq54xx = "${WORKDIR}/ipq54xx/"
-PLATFORMSCRIPTPATH:ipq52xx = "${WORKDIR}/"
-PLATFORMSCRIPTPATH:ipq96xx = "${WORKDIR}/"
+PLATFORMSCRIPTPATH:ipq52xx = "${WORKDIR}/ipq52xx/"
+PLATFORMSCRIPTPATH:ipq96xx = "${WORKDIR}/ipq96xx/"
 
 inherit systemd
 
