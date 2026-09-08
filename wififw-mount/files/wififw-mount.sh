@@ -17,13 +17,13 @@
 
 . /lib/functions/boot.sh
 
-if [ -e /lib/read_caldata_to_fs.sh ]
-then
-. /lib/read_caldata_to_fs.sh
-fi
-
 START=00
 STOP=95
+
+# Needed for conf_get_value(), used by caldata_symlink_creation_mr() to resolve
+# ART_CHIP_VERSION_* overrides from /tmp/art.conf.
+[ -e /lib/create_cfg_caldata.sh ] && . /lib/create_cfg_caldata.sh
+[ -e /lib/read_caldata_to_fs.sh ] && . /lib/read_caldata_to_fs.sh
 
 create_soft_link()
 {
@@ -120,6 +120,19 @@ caldata_symlink_creation_mr(){
 			fi
 		fi
 	done < /lib/firmware/ftm.conf
+
+	# Only attempt version resolution when a valid entry was found
+	if [ -n "$dir_lib" ]; then
+		# Resolve dir_lib to the latest-present versioned directory (e.g. qcn9625_v2)
+		# when /tmp/art.conf tags one for this chip family; only accept the tagged
+		# value if it is actually a version of the same chip (prefix-matches dir_lib).
+		local chip_version=$(conf_get_value /tmp/art.conf "ART_CHIP_VERSION_${dir_lib}")
+		case "$chip_version" in
+			"${dir_lib}"*)
+				dir_lib="$chip_version"
+				;;
+		esac
+	fi
 
 	if [ -e "/lib/firmware/${dir_lib}/caldata_${art_slot}.b${brdid}" ]; then
 		ln -sf "/lib/firmware/${dir_lib}/caldata_${art_slot}.b${brdid}" \
