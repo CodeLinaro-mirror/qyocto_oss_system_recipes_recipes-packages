@@ -140,6 +140,59 @@ caldata_symlink_creation_mr(){
 	fi
 }
 
+# RDP -> ftm.conf entry index mapping, shared by the qcn9625, qcn9625_v2,
+# and qcn9589 firmware-present blocks so new RDPs are added in one place.
+rdp_caldata_symlinks_11bn() {
+	local board_name="$1"
+	local chip="$2"
+
+	case "$chip" in
+		qcn9625|qcn9625_v2)
+			case $board_name in
+				rdp492*|rdp488*|rdp489*|rdp530*)
+					caldata_symlink_creation_mr "$board_name" "1"
+					caldata_symlink_creation_mr "$board_name" "2"
+					caldata_symlink_creation_mr "$board_name" "3"
+				;;
+				rdp499* | rdp502* | rdp505*)
+					caldata_symlink_creation_mr "$board_name" "1"
+				;;
+				rdp503* | rdp504*|rdp506*|rdp529*|rdp532*)
+					caldata_symlink_creation_mr "$board_name" "1"
+					caldata_symlink_creation_mr "$board_name" "2"
+				;;
+				rdp507* | rdp490* | rdp491*)
+					# qcn9625 is the 2nd ftm.conf entry for dual-radio Rimini RDPs
+					caldata_symlink_creation_mr "$board_name" "2"
+				;;
+				rdp525*)
+					caldata_symlink_creation_mr "$board_name" "2"
+					caldata_symlink_creation_mr "$board_name" "3"
+					caldata_symlink_creation_mr "$board_name" "4"
+				;;
+				*)
+					#No sm links
+				;;
+			esac
+		;;
+		qcn9589)
+			case $board_name in
+				rdp507* | rdp490* | rdp491* | rdp525*)
+					# qcn9589 is the 1st ftm.conf entry for dual-radio Rimini RDPs
+					caldata_symlink_creation_mr "$board_name" "1"
+				;;
+				rdp511* | rdp512*)
+					# single-radio Rimini RDPs, qcn9589 only
+					caldata_symlink_creation_mr "$board_name" "1"
+				;;
+				*)
+					#No sm links
+				;;
+			esac
+		;;
+	esac
+}
+
 caldata_symlink_creation(){
     var=0
     local brdid=""
@@ -760,29 +813,9 @@ mount_wifi_fw (){
                 ln -s /lib/firmware/$arch/WIFI_FW/qcn9625/board-2.bin .
                 ln -s /lib/firmware/$arch/WIFI_FW/qcn9625/regdb.bin .
                 ln -s /lib/firmware/$arch/WIFI_FW/qcn9625/qdss_trace_config.bin .
-            fi
-            case $board_name in
-                rdp492*|rdp488*|rdp489*)
-                    caldata_symlink_creation_mr "$board_name" "1"
-                    caldata_symlink_creation_mr "$board_name" "2"
-                    caldata_symlink_creation_mr "$board_name" "3"
-                ;;
-                rdp499* | rdp502* | rdp505*)
-                    caldata_symlink_creation_mr "$board_name" "1"
-                ;;
-                rdp503* | rdp504* | rdp506*)
-                    caldata_symlink_creation_mr "$board_name" "1"
-                    caldata_symlink_creation_mr "$board_name" "2"
-                ;;
-                rdp507* | rdp490* | rdp491*)
-                    # qcn9625 is the 2nd ftm.conf entry for dual-radio Rimini RDPs
-                    caldata_symlink_creation_mr "$board_name" "2"
-                ;;
-                *)
-                    #No sm links
-                ;;
-            esac
 
+                rdp_caldata_symlinks_11bn "$board_name" "qcn9625"
+            fi
         fi
 
     if [ -d /lib/firmware/$arch/WIFI_FW/qcn9625_v2 ]; then
@@ -806,30 +839,9 @@ mount_wifi_fw (){
                 ln -s /lib/firmware/$arch/WIFI_FW/qcn9625_v2/mcss.bin .
             fi
 
-            case $board_name in
-                rdp488*|rdp489*)
-                    caldata_symlink_creation_mr "$board_name" "1"
-                    caldata_symlink_creation_mr "$board_name" "2"
-                    caldata_symlink_creation_mr "$board_name" "3"
-                ;;
-                rdp499* | rdp502* | rdp505*)
-                    caldata_symlink_creation_mr "$board_name" "1"
-                ;;
-                rdp503* | rdp504*|rdp506*)
-                    caldata_symlink_creation_mr "$board_name" "1"
-                    caldata_symlink_creation_mr "$board_name" "2"
-                ;;
-                rdp507* | rdp490* | rdp491*)
-                    # qcn9625 is the 2nd ftm.conf entry for dual-radio Rimini RDPs
-                    caldata_symlink_creation_mr "$board_name" "2"
-                ;;
-                *)
-                    #No sm links
-                ;;
-            esac
+            rdp_caldata_symlinks_11bn "$board_name" "qcn9625_v2"
         fi
     fi
-
     if [ -d /lib/firmware/$arch/WIFI_FW/qcn9589 ]; then
         if [ -e /lib/firmware/$arch/WIFI_FW/qcn9589/board-2.bin ]; then
             mkdir -p /lib/firmware/ath12k/QCN9589/hw1.0/
@@ -847,20 +859,7 @@ mount_wifi_fw (){
             if [ -e /lib/firmware/$arch/WIFI_FW/qcn9589/mcss.bin ]; then
                 ln -s /lib/firmware/$arch/WIFI_FW/qcn9589/mcss.bin .
             fi
-
-            case $board_name in
-                rdp507* | rdp490* | rdp491*)
-                    # qcn9589 is the 1st ftm.conf entry for dual-radio Rimini RDPs
-                    caldata_symlink_creation_mr "$board_name" "1"
-                ;;
-                rdp511* | rdp512*)
-                    # single-radio Rimini RDPs, qcn9589 only
-                    caldata_symlink_creation_mr "$board_name" "1"
-                ;;
-                *)
-                    #No sm links
-                ;;
-                        esac
+            rdp_caldata_symlinks_11bn "$board_name" "qcn9589"
         fi
     fi
 
