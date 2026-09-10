@@ -193,6 +193,37 @@ rdp_caldata_symlinks_11bn() {
 	esac
 }
 
+setup_echo_overlay(){
+	local target="$1"
+	mkdir -p /tmp/qcn${target}-upper
+	mkdir -p /tmp/.qcn${target}-work
+	mountpoint -q /lib/firmware/qcn${target} || mount -t overlay overlay -o rw,lowerdir=/lib/firmware/qcn${target},upperdir=/tmp/qcn${target}-upper,workdir=/tmp/.qcn${target}-work /lib/firmware/qcn${target}
+	cp -f /tmp/qcn${target}/caldata_*.b* /lib/firmware/qcn${target}/
+	mkdir -p /tmp/hw1.0-${target}-upper
+	mkdir -p /tmp/.hw1.0-${target}-work
+	mountpoint -q /lib/firmware/ath12k/QCN${target}/hw1.0 || mount -t overlay overlay -o rw,lowerdir=/lib/firmware/ath12k/QCN${target}/hw1.0,upperdir=/tmp/hw1.0-${target}-upper,workdir=/tmp/.hw1.0-${target}-work /lib/firmware/ath12k/QCN${target}/hw1.0
+}
+
+caldata_symlink_creation_overlay(){
+	var=0
+	local target="$3"
+	while read -r line
+	do
+		board=$(echo $line | cut -f1 -d',')
+		if [[ "$1" == *"$board" ]]; then
+			var=$((var+1))
+			if [[ $var == $2 ]]; then
+				local brdid=$(echo $line | cut -f2 -d',')
+				local art_slot=$(echo $line | cut -f3 -d',')
+				local pciid=$(echo $line | cut -f6 -d',')
+				break
+			fi
+		fi
+	done < /lib/firmware/ftm.conf
+
+	ln -sf /lib/firmware/qcn${target}/caldata_${art_slot}.b${brdid} /lib/firmware/ath12k/QCN${target}/hw1.0/cal-pci-000${pciid}:01:00.0.bin
+}
+
 caldata_symlink_creation(){
     var=0
     local brdid=""
@@ -875,6 +906,23 @@ mount_wifi_fw (){
         cd /vendor/firmware/$arch && ln -sf /lib/firmware/$arch/WIFI_FW/Data.msc .
 }
 
+mount_wifi_fw_echo()
+{
+    local board_name=$(cat /tmp/sysinfo/board_name)
+    case "$board_name" in
+        *echo-qmp5-v1)
+            do_load_ipq4019_board_bin
+            setup_echo_overlay 9625
+            caldata_symlink_creation_overlay "$board_name" "1" "9625"
+            caldata_symlink_creation_overlay "$board_name" "2" "9625"
+            caldata_symlink_creation_overlay "$board_name" "3" "9625"
+        ;;
+        *)
+            echo "\nInvalid Target"
+        ;;
+    esac
+}
+
 boot() {
  # . /lib/functions/system.sh
 
@@ -925,6 +973,8 @@ boot() {
 		mount_wifi_fw "IPQ5210"
 	elif [[ "$platform" == IPQ9650 ]]; then
 		mount_wifi_fw "IPQ9650"
+	elif [ "$platform" == "ECHO" ]; then
+		mount_wifi_fw_echo
         else
                 echo "\nInvalid Target"
         fi
