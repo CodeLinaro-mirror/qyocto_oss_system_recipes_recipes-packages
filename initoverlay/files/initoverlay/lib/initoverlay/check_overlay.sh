@@ -46,6 +46,7 @@ check_for_jffs2() {
     # skip jffs2 mounting even if it's there if we have volume named
     # ubi_rootfs_data
     check_skip && return
+    grep -qs rootfs_data /sys/class/ubi/ubi0/ubi0_*/name && return
 
     jffs2_ready || {
         grep -wqs rootfs_data /proc/mtd && {

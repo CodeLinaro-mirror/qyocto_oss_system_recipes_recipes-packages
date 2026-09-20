@@ -71,5 +71,7 @@ do_mount_overlay() {
 	do_mount_rootfs_data
 	rootfs_pivot_overlay
 	do_mount_no_jffs2
-	do_mount_no_mtd
+	# do_mount_no_mtd: mount_no_mtd is not defined on this platform (IPQ5424 uses ubifs);
+	# calling it triggers the dupe() fallback, which spawns a large number of ln
+	# processes and wastes significant boot time
 }

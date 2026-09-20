@@ -102,6 +102,7 @@ dupe() { # <new_root> <old_root>
 pivot() { # <new_root> <old_root>
 	mount -o move /proc $1/proc && \
 	pivot_root $1 $1$2 && {
+		mount -o move $2/lib/firmware/fig /lib/firmware/fig 2>&-
 		mount -o move $2/dev /dev
 		mount -o move $2/var/volatile /var/volatile 2>&-
 		mount -o move $2/tmp /tmp

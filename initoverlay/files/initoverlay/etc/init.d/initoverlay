@@ -48,7 +48,7 @@ enable_installedservices() {
 
 do_initoverlay() {
 	echo 6 > /sys/class/firmware/timeout
-	sleep 5 # sleep is required to delay initoverlay service
+	sleep 1 # jffs2 check is skipped on UBI platforms, no need to wait for NAND
 	do_mount_overlay
 	enable_installedservices
 	if [ -d /etc/utopia ]; then

@@ -238,6 +238,17 @@ mount_wifi_fw (){
                 mkdir -p /lib/firmware/qcn9224 && cd /lib/firmware/qcn9224 && create_soft_link /lib/firmware/$arch/WIFI_FW/qcn9224/qdss* .
         fi
 
+        # Congo (WCN8850, fig_v2) firmware.
+        # Primary path: init-wifi already mounted WIFIFW squashfs and
+        # bind-mounted /lib/firmware/fig, and launched load-fig-fw
+        # (bind mount + modprobe fig_v2) before systemd starts; the
+        # mount | grep WIFI_FW check at the top of mount_wifi_fw()
+        # then returns early.
+        # Fallback (init-wifi absent): run load-fig-fw here.
+        if [ -d /lib/firmware/$arch/WIFI_FW/fig ]; then
+                load-fig-fw
+        fi
+
         if [ -d /lib/firmware/$arch/WIFI_FW/qcn9100 ]; then
                 cd $fwfolder && mkdir -p qcn9100 && mkdir -p /vendor/firmware/qcn9100
                 cd qcn9100 && ln -s /lib/firmware/$arch/WIFI_FW/qcn9100/*.* . && ln -s /lib/firmware/$arch/WIFI_FW/q6_fw.* .
@@ -376,8 +387,10 @@ mount_wifi_fw (){
                         ln -s /lib/firmware/$arch/WIFI_FW/qdss_trace_config.bin .
                 fi
         fi
-        mkdir -p /vendor/firmware/$arch
-        cd /vendor/firmware/$arch && ln -sf /lib/firmware/$arch/WIFI_FW/Data.msc .
+        if [ -f /lib/firmware/$arch/WIFI_FW/Data.msc ]; then
+                mkdir -p /vendor/firmware/$arch
+                cd /vendor/firmware/$arch && ln -sf /lib/firmware/$arch/WIFI_FW/Data.msc .
+        fi
 }
 
 boot() {
